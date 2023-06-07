@@ -608,7 +608,8 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 						this.styles.selectionPointOutlineColor || styles.pointOutlineColor;
 					styles.pointWidth =
 						this.styles.selectionPointWidth || styles.pointWidth;
-					styles.pointOutlineWidth = this.styles.midPointOutlineWidth || 2;
+					styles.pointOutlineWidth =
+						this.styles.selectionPointOutlineWidth || 2;
 					styles.zIndex = 30;
 
 					return styles;

@@ -102,6 +102,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			paint: {
 				"line-width": ["get", "polygonOutlineWidth"],
 				"line-color": ["get", "polygonOutlineColor"],
+				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
 
@@ -120,6 +121,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			paint: {
 				"line-width": ["get", "lineStringWidth"],
 				"line-color": ["get", "lineStringColor"],
+				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
 
