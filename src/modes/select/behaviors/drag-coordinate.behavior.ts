@@ -65,6 +65,10 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 			return false;
 		}
 
+		if (event.setDraggability) {
+			event.setDraggability(false);
+		}
+
 		// Store the updated coord
 		const updatedCoordinate = [event.lng, event.lat];
 

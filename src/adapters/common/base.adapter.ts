@@ -307,6 +307,7 @@ export abstract class TerraDrawBaseAdapter {
 		const { containerX, containerY } = this.getContainerXYPosition(event);
 		const button = this.getButton(event);
 		const heldKeys = Array.from(this._heldKeys);
+		const setDraggability = this.setDraggability.bind(this);
 
 		return {
 			lng: limitPrecision(lng, this._coordinatePrecision),
@@ -315,6 +316,7 @@ export abstract class TerraDrawBaseAdapter {
 			containerY,
 			button,
 			heldKeys,
+			setDraggability,
 		};
 	}
 

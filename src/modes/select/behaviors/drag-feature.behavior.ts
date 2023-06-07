@@ -52,6 +52,10 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 			return;
 		}
 
+		if (event.setDraggability) {
+			event.setDraggability(false);
+		}
+
 		const geometry = this.store.getGeometryCopy(selectedId);
 		const mouseCoord = [event.lng, event.lat];
 

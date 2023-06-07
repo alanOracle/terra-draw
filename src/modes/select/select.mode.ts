@@ -467,8 +467,6 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.dragEventCount = 0;
 		this.setCursor("grabbing");
 		this.dragFeature.position = [event.lng, event.lat];
-
-		setMapDraggability(false);
 	}
 
 	/** @internal */
