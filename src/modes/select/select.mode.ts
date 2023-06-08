@@ -640,4 +640,12 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 		return styles;
 	}
+
+	getFeatureAtMouseEvent(event: TerraDrawMouseEvent){
+		return this.featuresAtMouseEvent.find(
+			event,
+			this.selected.length > 0
+		).clickedFeature;
+	}
+
 }
