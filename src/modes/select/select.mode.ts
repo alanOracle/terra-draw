@@ -467,7 +467,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		}
 
 		this.dragEventCount = 0;
-		this.setCursor("move");
+		this.setCursorStyle(event);
 		this.dragFeature.position = [event.lng, event.lat];
 	}
 
@@ -542,7 +542,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		_: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void
 	) {
-		this.setCursor("move");
+		this.setCursorStyle(_);
 		this.dragFeature.position = undefined;
 		this.rotateFeature.reset();
 		this.scaleFeature.reset();
@@ -580,17 +580,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		if (nearbySelectionPoint) {
 			this.setCursor("pointer");
 		} else {
-			// Check if mouse is over any feature
-			const isMouseOverFeature = this.featuresAtMouseEvent.find(
-				event,
-				this.selected.length > 0
-			).clickedFeature;
-
-			// Also check if the mouse is over the current selected feature
-			const isAboveSelected = this.selected[0] === isMouseOverFeature?.id;
-
-			// Only set the cursor to move if the mouse is over the current selected feature
-			isMouseOverFeature && isAboveSelected ? this.setCursor("move") : this.setCursor("unset");
+			this.setCursorStyle(event);
 		}
 	}
 
@@ -639,6 +629,17 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		}
 
 		return styles;
+	}
+
+	setCursorStyle(event: TerraDrawMouseEvent){
+		// Check if mouse is over any feature
+		const isMouseOverFeature = this.getFeatureAtMouseEvent(event);
+
+		// Also check if the mouse is over the current selected feature
+		const isAboveSelected = this.selected[0] === isMouseOverFeature?.id;
+
+		// Only set the cursor to move if the mouse is over the current selected feature
+		isMouseOverFeature && isAboveSelected ? this.setCursor("move") : this.setCursor("grab");
 	}
 
 	getFeatureAtMouseEvent(event: TerraDrawMouseEvent){
