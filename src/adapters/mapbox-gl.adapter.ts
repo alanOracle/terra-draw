@@ -41,13 +41,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * */
 	private clearLayers() {
 		if (this._rendered) {
-			Object.keys(["point", "linestring", "polygon"]).forEach((geometryKey) => {
+			["point", "linestring", "polygon"].forEach((geometryKey) => {
 				const id = `td-${geometryKey.toLowerCase()}`;
 				this._map.removeLayer(id);
 
 				// Special case for polygons as it has another id for the outline
 				// that we need to make sure we remove if _drawOutline is true
-				if (geometryKey === "polygonId" && this._drawOutline) {
+				if (geometryKey === "polygon" && this._drawOutline) {
 					this._map.removeLayer(id + "-outline");
 				}
 				this._map.removeSource(id);
