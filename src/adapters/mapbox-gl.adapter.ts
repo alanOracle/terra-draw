@@ -14,22 +14,13 @@ import { GeoJSONStoreFeatures, GeoJSONStoreGeometries } from "../store/store";
 import { TerraDrawBaseAdapter } from "./common/base.adapter";
 
 export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
-	constructor(config: {
-		map: mapboxgl.Map;
-		coordinatePrecision?: number;
-		drawOutline?: boolean;
-		drawFill?: boolean;
-	}) {
+	constructor(config: { map: mapboxgl.Map; coordinatePrecision?: number }) {
 		super(config);
 
-		this._drawOutline = config.drawOutline ?? true;
-		this._drawFill = config.drawFill ?? true;
 		this._map = config.map;
 		this._container = this._map.getContainer();
 	}
 
-	private _drawOutline: boolean;
-	private _drawFill: boolean;
 	private _nextRender: any;
 	private _map: mapboxgl.Map;
 	private _container: HTMLElement;
@@ -46,8 +37,8 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				this._map.removeLayer(id);
 
 				// Special case for polygons as it has another id for the outline
-				// that we need to make sure we remove if _drawOutline is true
-				if (geometryKey === "polygon" && this._drawOutline) {
+				// that we need to make sure we remove
+				if (geometryKey === "polygon") {
 					this._map.removeLayer(id + "-outline");
 				}
 				this._map.removeSource(id);
@@ -77,7 +68,6 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			paint: {
 				"fill-color": ["get", "polygonFillColor"],
 				"fill-opacity": ["get", "polygonFillOpacity"],
-				"fill-outline-color": ["get", "polygonFillColor"],
 			},
 		} as FillLayer);
 	}
@@ -153,12 +143,8 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			this._addLineLayer(id, beneath);
 		}
 		if (featureType === "Polygon") {
-			if (this._drawFill) {
-				this._addFillLayer(id);
-			}
-			if (this._drawOutline) {
-				this._addFillOutlineLayer(id, beneath);
-			}
+			this._addFillLayer(id);
+			this._addFillOutlineLayer(id, beneath);
 		}
 	}
 

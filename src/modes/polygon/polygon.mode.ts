@@ -222,6 +222,7 @@ export class TerraDrawPolygonMode extends TerraDrawBaseDrawMode<PolygonStyling> 
 			},
 		]);
 
+		// Commenting to avoid update of the points on each move (better performance)
 		// if (this.closingPoints.ids.length) {
 		// 	this.closingPoints.update(updatedCoordinates);
 		// }
