@@ -209,6 +209,29 @@ class TerraDraw {
 		return modeStyles;
 	}
 
+	public reRender() {
+		const currentMode = this._modes[this._mode.mode];
+
+		// 1 stop current mode to remove midpoints or unwanted features
+		if (currentMode){
+			currentMode.stop();
+		}
+
+		// 2 now we get all the wanted features
+		const snapshot = this.getSnapshot();
+
+		// 3 basically remove everything, store, sources and layers
+		this.clear();
+		
+		// 4 apply stored snapshot
+		this.addFeatures(snapshot);
+
+		// 5 start once again the same mode the user was in
+		if (currentMode){
+			currentMode.start();
+		}
+	}
+
 	/**
 	 * Allows the setting of a style for a given mode
 	 *

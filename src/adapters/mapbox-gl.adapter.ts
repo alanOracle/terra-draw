@@ -34,14 +34,14 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		if (this._rendered) {
 			["point", "linestring", "polygon"].forEach((geometryKey) => {
 				const id = `td-${geometryKey.toLowerCase()}`;
-				this._map.removeLayer(id);
+				if (this._map.getLayer(id)) this._map.removeLayer(id);
 
 				// Special case for polygons as it has another id for the outline
 				// that we need to make sure we remove
 				if (geometryKey === "polygon") {
-					this._map.removeLayer(id + "-outline");
+					if (this._map.getLayer(id + "-outline")) this._map.removeLayer(id + "-outline");
 				}
-				this._map.removeSource(id);
+				if (this._map.getSource(id)) this._map.removeSource(id);
 			});
 
 			this._rendered = false;
@@ -164,10 +164,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		features: Feature<T>[]
 	) {
 		const id = `td-${featureType.toLowerCase()}`;
-		(this._map.getSource(id) as any).setData({
-			type: "FeatureCollection",
-			features: features,
-		});
+		const source = this._map.getSource(id);
+		if (source) {
+			(source as any).setData({
+				type: "FeatureCollection",
+				features: features,
+			});
+		}
 		return id;
 	}
 
