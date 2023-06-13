@@ -174,6 +174,46 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		return id;
 	}
 
+	private getEmptyGeometries(): {
+		points: GeoJSONStoreFeatures[];
+		linestrings: GeoJSONStoreFeatures[];
+		polygons: GeoJSONStoreFeatures[];
+	} {
+		return {
+			points: [],
+			linestrings: [],
+			polygons: [],
+		};
+	}
+
+	private changedIds: {
+		deletion: boolean;
+		points: boolean;
+		linestrings: boolean;
+		polygons: boolean;
+	} = {
+		deletion: false,
+		points: false,
+		linestrings: false,
+		polygons: false,
+	};
+
+	private updateChangedIds(changes: TerraDrawChanges) {
+		[...changes.updated, ...changes.created].forEach((feature) => {
+			if (feature.geometry.type === "Point") {
+				this.changedIds.points = true;
+			} else if (feature.geometry.type === "LineString") {
+				this.changedIds.linestrings = true;
+			} else if (feature.geometry.type === "Polygon") {
+				this.changedIds.polygons = true;
+			}
+		});
+
+		if (changes.deletedIds.length > 0) {
+			this.changedIds.deletion = true;
+		}
+	}
+
 	/**
 	 * Returns the longitude and latitude coordinates from a given PointerEvent on the map.
 	 * @param event The PointerEvent or MouseEvent  containing the screen coordinates of the pointer.
@@ -255,26 +295,33 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * @param styling An object mapping draw modes to feature styling functions
 	 */
 	public render(changes: TerraDrawChanges, styling: TerraDrawStylingFunction) {
+		this.updateChangedIds(changes);
+
+		if (this._nextRender) {
+			cancelAnimationFrame(this._nextRender);
+		}
+
+		// Because Mapbox GL makes us pass in a full re-render of alll the features
+		// we can do debounce rendering to only render the last render in a given
+		// frame bucket (16ms)
+
+		this._nextRender = requestAnimationFrame(() => {
+			// Get a map of the changed feature IDs by geometry type
+			// We use this to determine which MB layers need to be updated
+
 			const features = [
 				...changes.created,
 				...changes.updated,
 				...changes.unchanged,
 			];
 
-			const changed = {
-				points: [] as GeoJSONStoreFeatures[],
-				linestrings: [] as GeoJSONStoreFeatures[],
-				polygons: [] as GeoJSONStoreFeatures[],
-			};
-
-			const unchanged = {
-				points: [] as GeoJSONStoreFeatures[],
-				linestrings: [] as GeoJSONStoreFeatures[],
-				polygons: [] as GeoJSONStoreFeatures[],
-			};
+			const geometryFeatures = this.getEmptyGeometries();
 
 			for (let i = 0; i < features.length; i++) {
 				const feature = features[i];
+
+				if (feature.geometry.type === "Point") {
+				}
 
 				Object.keys(styling).forEach((mode) => {
 					const { properties } = feature;
@@ -290,28 +337,22 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 						properties.pointOutlineColor = styles.pointOutlineColor;
 						properties.pointOutlineWidth = styles.pointOutlineWidth;
 						properties.pointWidth = styles.pointWidth;
-						changes.unchanged.includes(feature)
-							? unchanged.points.push(feature)
-							: changed.points.push(feature);
+						geometryFeatures.points.push(feature);
 					} else if (feature.geometry.type === "LineString") {
 						properties.lineStringColor = styles.lineStringColor;
 						properties.lineStringWidth = styles.lineStringWidth;
-						changes.unchanged.includes(feature)
-							? unchanged.linestrings.push(feature)
-							: changed.linestrings.push(feature);
+						geometryFeatures.linestrings.push(feature);
 					} else if (feature.geometry.type === "Polygon") {
 						properties.polygonFillColor = styles.polygonFillColor;
 						properties.polygonFillOpacity = styles.polygonFillOpacity;
 						properties.polygonOutlineColor = styles.polygonOutlineColor;
 						properties.polygonOutlineWidth = styles.polygonOutlineWidth;
-						changes.unchanged.includes(feature)
-							? unchanged.polygons.push(feature)
-							: changed.polygons.push(feature);
+						geometryFeatures.polygons.push(feature);
 					}
 				});
 			}
 
-			const { points, linestrings, polygons } = changed;
+			const { points, linestrings, polygons } = geometryFeatures;
 
 			if (!this._rendered) {
 				const pointId = this._addGeoJSONLayer<Point>(
@@ -327,34 +368,35 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				this._map.moveLayer(pointId);
 				this._rendered = true;
 			} else {
-				const numDeletedIds = changes.deletedIds.length;
-				// If unchanged is the only one with features means is updating the style
-				const isStylingUpdate =
-					numDeletedIds === 0 &&
-					changes.created.length === 0 &&
-					changes.updated.length === 0 &&
-					changes.unchanged.length > 0;
-				// Forcing an updtae if deleting something or if changing style
-				const forceUpdate = numDeletedIds > 0 || isStylingUpdate;
+				// If deletion occured we always have to update all layers
+				// as we don't know the type (TODO: perhaps we could pass that back?)
+				const deletionOccured = this.changedIds.deletion;
 
-				if (forceUpdate || points.length) {
-					this._setGeoJSONLayerData<Point>(
+				// Determine if we need to update each layer by geometry type
+				const updatePoints = deletionOccured || this.changedIds.points;
+				const updateLineStrings =
+					deletionOccured || this.changedIds.linestrings;
+				const updatedPolygon = deletionOccured || this.changedIds.polygons;
+
+				let pointId;
+				if (updatePoints) {
+					pointId = this._setGeoJSONLayerData<Point>(
 						"Point",
-						points.concat(unchanged.points) as Feature<Point>[]
+						points as Feature<Point>[]
 					);
 				}
 
-				if (forceUpdate || linestrings.length) {
+				if (updateLineStrings) {
 					this._setGeoJSONLayerData<LineString>(
 						"LineString",
-						linestrings.concat(unchanged.linestrings) as Feature<LineString>[]
+						linestrings as Feature<LineString>[]
 					);
 				}
 
-				if (forceUpdate || polygons.length) {
+				if (updatedPolygon) {
 					this._setGeoJSONLayerData<Polygon>(
 						"Polygon",
-						polygons.concat(unchanged.polygons) as Feature<Polygon>[]
+						polygons as Feature<Polygon>[]
 					);
 				}
 
@@ -363,17 +405,14 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			}
 			// Copyright © [2023,] , Oracle and/or its affiliates.
 
-			// TODO: Figure out why this was added?
-			// Probably to do with forcing style changes?
-			// if ((this._map as any).style) {
-			//     // cancel the scheduled update
-			//     if ((this._map as any)._frame) {
-			//         (this._map as any)._frame.cancel();
-			//         (this._map as any)._frame = null;
-			//     }
-			//     (this._map as any)._render();
-			// }
-			// this._nextRender = undefined;
+			// Reset changed ids
+			this.changedIds = {
+				points: false,
+				linestrings: false,
+				polygons: false,
+				deletion: false,
+			};
+		});
 	}
 
 	/**
