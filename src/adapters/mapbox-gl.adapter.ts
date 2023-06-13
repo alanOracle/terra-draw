@@ -355,28 +355,29 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			const { points, linestrings, polygons } = geometryFeatures;
 
 			if (!this._rendered) {
-				const pointId = this._addGeoJSONLayer<Point>(
-					"Point",
-					points as Feature<Point>[]
-				);
+				this._addGeoJSONLayer<Point>("Point", points as Feature<Point>[]);
 				this._addGeoJSONLayer<LineString>(
 					"LineString",
 					linestrings as Feature<LineString>[]
 				);
-				this._addGeoJSONLayer<Polygon>("Polygon", polygons as Feature<Polygon>[]);
-				// Ensure selection/mid points are rendered on top
-				this._map.moveLayer(pointId);
+				this._addGeoJSONLayer<Polygon>(
+					"Polygon",
+					polygons as Feature<Polygon>[]
+				);
 				this._rendered = true;
 			} else {
 				// If deletion occured we always have to update all layers
 				// as we don't know the type (TODO: perhaps we could pass that back?)
 				const deletionOccured = this.changedIds.deletion;
 
+				// If unchanged is the only one with features means is updating the style
+				const styleChangeOccured = Object.values(this.changedIds).every(change=>!change) && changes.unchanged.length > 0;
+
 				// Determine if we need to update each layer by geometry type
-				const updatePoints = deletionOccured || this.changedIds.points;
+				const updatePoints = deletionOccured || styleChangeOccured || this.changedIds.points;
 				const updateLineStrings =
-					deletionOccured || this.changedIds.linestrings;
-				const updatedPolygon = deletionOccured || this.changedIds.polygons;
+					deletionOccured || styleChangeOccured || this.changedIds.linestrings;
+				const updatedPolygon = deletionOccured || styleChangeOccured || this.changedIds.polygons;
 
 				let pointId;
 				if (updatePoints) {
@@ -402,6 +403,9 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 
 				// TODO: This logic could be better - I think this will render the selection points above user
 				// defined layers outside of TerraDraw which is perhaps unideal
+				
+				// Ensure selection/mid points are rendered on top
+				pointId && this._map.getLayer(pointId) && this._map.moveLayer(pointId);
 			}
 			// Copyright © [2023,] , Oracle and/or its affiliates.
 
