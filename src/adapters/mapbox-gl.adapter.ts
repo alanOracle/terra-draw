@@ -254,6 +254,8 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * @returns An object with 'x' and 'y' properties representing the pixel coordinates within the map container.
 	 */
 	public project(lng: number, lat: number) {
+		// lng = lng < -180 ? -180 : lng > 180 ? 180 : lng;
+		lat = lat < -89 ? -89 : lat > 90 ? 90 : lat;
 		const { x, y } = this._map.project({ lng, lat });
 		return { x, y };
 	}
@@ -297,15 +299,6 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	public render(changes: TerraDrawChanges, styling: TerraDrawStylingFunction) {
 		this.updateChangedIds(changes);
 
-		if (this._nextRender) {
-			cancelAnimationFrame(this._nextRender);
-		}
-
-		// Because Mapbox GL makes us pass in a full re-render of alll the features
-		// we can do debounce rendering to only render the last render in a given
-		// frame bucket (16ms)
-
-		this._nextRender = requestAnimationFrame(() => {
 			// Get a map of the changed feature IDs by geometry type
 			// We use this to determine which MB layers need to be updated
 
@@ -416,7 +409,6 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				polygons: false,
 				deletion: false,
 			};
-		});
 	}
 
 	/**

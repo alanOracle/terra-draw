@@ -403,6 +403,10 @@ class TerraDraw {
 				return this._mode.state;
 			},
 			onClick: (event) => {
+				// Ignore right clicks
+				if (event.button === "right") {
+					return;
+				}
 				this._mode.onClick(event);
 			},
 			onMouseMove: (event) => {
