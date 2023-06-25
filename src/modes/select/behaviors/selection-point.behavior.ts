@@ -37,6 +37,14 @@ export class SelectionPointBehavior extends TerraDrawModeBehavior {
 		}
 	}
 
+	public deleteSingle(index: number) {
+		if (this._selectionPoints[index] === undefined) {
+			return undefined;
+		}
+		this.store.delete([this._selectionPoints[index]]);
+		this._selectionPoints.splice(index, 1);
+	}
+
 	public getUpdated(updatedCoordinates: Position[]) {
 		if (this._selectionPoints.length === 0) {
 			return undefined;

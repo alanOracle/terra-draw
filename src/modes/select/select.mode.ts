@@ -74,6 +74,8 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	private dragCoordinate!: DragCoordinateBehavior;
 	private rotateFeature!: RotateFeatureBehavior;
 	private scaleFeature!: ScaleFeatureBehavior;
+	private dragCoordinateIndex = -1;
+	private dragType: 'none' | 'coordinate' | 'feature' = 'none';
 
 	constructor(options?: {
 		styles?: Partial<SelectionStyling>;
@@ -469,6 +471,66 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.dragEventCount = 0;
 		this.setCursorStyle(event);
 		this.dragFeature.position = [event.lng, event.lat];
+
+		const selectedId = this.selected[0];
+
+		// Check if we are dragging a coordinate
+		const coordinateIdx = this.dragCoordinate.isCoordinateNearEvent(event, selectedId);
+
+		// If so we set it in dragType and store the index of the coordinate
+		this.dragType = coordinateIdx >= 0 ? 'coordinate' : 'none';
+		this.dragCoordinateIndex = coordinateIdx;
+
+		// If dragType was not set to coordinate we check if we are dragging the whole feature
+		if (this.dragType == 'none'){
+			// First check the feature related to the event
+			const { clickedFeature } = this.featuresAtMouseEvent.find(
+				event,
+				this.selected.length > 0
+			);
+
+			// Also check if that feature is the one we have selected
+			const clickedSelectedFeature = clickedFeature && clickedFeature.id === selectedId;
+
+			// If user clicked inside the selected feature means we are dragging it so set it in dragType
+			this.dragType = clickedSelectedFeature ? 'feature' : 'none';
+		}
+
+		// If we are dragging the coordinate
+		if (this.dragType == 'coordinate'){
+
+			// Set auxiliar variables
+			let clickedSelectionIndex = -1;
+			let clickedFeatureDistance = Infinity;
+
+			// Find the index of the selected coordinate in selectionPoints
+			this.selectionPoints.ids.forEach((id: string, index: number) => {
+				const geometry = this.store.getGeometryCopy<Point>(id);
+				const distance = this.pixelDistance.measure(event, geometry.coordinates);
+
+				if (
+					distance < this.pointerDistance &&
+					distance < clickedFeatureDistance
+				) {
+					clickedFeatureDistance = distance;
+					clickedSelectionIndex = index;
+				}
+			});
+
+			// If we were able to find it, we delete that single selection point to improve performance
+			// Since thats the only point actually moving when dragging a coordinate
+			if (clickedSelectionIndex>=0) {
+				this.selectionPoints.deleteSingle(clickedSelectionIndex);
+			}
+
+			// Also deleting all midpoints (Also for performance to avoid updating them when dragging a coordinate)
+			this.midPoints.delete();
+
+		} else if (this.dragType == 'feature'){
+			// Remove all selection and mid points
+			this.selectionPoints.delete();
+			this.midPoints.delete();
+		}
 	}
 
 	/** @internal */
@@ -520,9 +582,10 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			modeFlags &&
 			modeFlags.feature &&
 			modeFlags.feature.coordinates &&
-			modeFlags.feature.coordinates.draggable
+			modeFlags.feature.coordinates.draggable &&
+			this.dragType === 'coordinate'
 		) {
-			const coordinateWasDragged = this.dragCoordinate.drag(event, selectedId);
+			const coordinateWasDragged = this.dragCoordinate.drag(event, selectedId, this.dragCoordinateIndex);
 
 			if (coordinateWasDragged) {
 				return;
@@ -530,7 +593,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		}
 
 		// Check if feature is draggable and is dragged
-		if (modeFlags && modeFlags.feature && modeFlags.feature.draggable) {
+		if (modeFlags && modeFlags.feature && modeFlags.feature.draggable && this.dragType === 'feature') {
 			this.dragFeature.drag(event, selectedId);
 
 			this.dragFeature.position = [event.lng, event.lat];
@@ -547,7 +610,24 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.rotateFeature.reset();
 		this.scaleFeature.reset();
 		setMapDraggability(true);
+
+		// If we were dragging a coordinate first delete all selection 
+		// and mid points to reset everything from scratch
+		if (this.dragType == 'coordinate'){
+			this.selectionPoints.delete();
+			this.midPoints.delete();
+		}
+
+		// Re construct all selection and midpoints
+		if (this.dragType == 'coordinate' || this.dragType == 'feature'){
+			this.createSelectionAndMidPoints();
+		}
+
+		// Reset dragType to none
+		this.dragType == 'none';
+
 	}
+	// Copyright © [2023,] , Oracle and/or its affiliates.
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
@@ -647,6 +727,40 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			event,
 			this.selected.length > 0
 		).clickedFeature;
+	}
+
+	// Method to create the selection and mid points of the selected feature
+	createSelectionAndMidPoints(){
+		const selectedId = this.selected[0];
+
+		// Return if we have nothing selected
+		if (!selectedId) return;
+
+		const properties = this.store.getPropertiesCopy(selectedId);
+		const modeFlags = this.flags[properties.mode as string];
+		const { type, coordinates } = this.store.getGeometryCopy(selectedId);
+		
+		// Return if feature is not selectable or if type is not LineString or Polygon
+		if (type !== "LineString" && type !== "Polygon") return;
+		if (!modeFlags || !modeFlags.feature) return;
+
+		const selectedCoords: Position[] = type === "LineString" ? coordinates : coordinates[0];
+
+		if (selectedCoords && modeFlags && modeFlags.feature.coordinates) {
+			this.selectionPoints.create(
+				selectedCoords,
+				type,
+				selectedId as string
+			);
+
+			if (modeFlags.feature.coordinates.midpoints) {
+				this.midPoints.create(
+					selectedCoords,
+					selectedId as string,
+					this.coordinatePrecision
+				);
+			}
+		}
 	}
 
 }
