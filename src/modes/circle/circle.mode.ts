@@ -111,6 +111,7 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
+		this.setCursor("crosshair");
 		if (this.clickCount === 1 && this.center && this.currentCircleId) {
 			const distanceKm = haversineDistanceKilometers(this.center, [
 				event.lng,

@@ -133,6 +133,7 @@ export class TerraDrawRectangleMode extends TerraDrawBaseDrawMode<RectanglePolyg
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
+		this.setCursor("crosshair");
 		this.updateRectangle(event);
 	}
 
