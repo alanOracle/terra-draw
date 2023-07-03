@@ -93,12 +93,20 @@ class TerraDraw {
 		};
 
 		const onFinish = (finishedId: string) => {
+			if (!this._enabled) {
+				return;
+			}
+
 			this._eventListeners.finish.forEach((listener) => {
 				listener(finishedId);
 			});
 		};
 
 		const onChange: StoreChangeHandler = (ids, event) => {
+			if (!this._enabled) {
+				return;
+			}
+
 			this._eventListeners.change.forEach((listener) => {
 				listener(ids, event);
 			});
@@ -139,6 +147,10 @@ class TerraDraw {
 		};
 
 		const onSelect = (selectedId: string) => {
+			if (!this._enabled) {
+				return;
+			}
+
 			this._eventListeners.select.forEach((listener) => {
 				listener(selectedId);
 			});
@@ -152,6 +164,10 @@ class TerraDraw {
 		};
 
 		const onDeselect = (deselectedId: string) => {
+			if (!this._enabled) {
+				return;
+			}
+
 			this._eventListeners.deselect.forEach((listener) => {
 				listener();
 			});
@@ -213,7 +229,7 @@ class TerraDraw {
 		const currentMode = this._modes[this._mode.mode];
 
 		// 1 stop current mode to remove midpoints or unwanted features
-		if (currentMode){
+		if (currentMode) {
 			currentMode.stop();
 		}
 
@@ -222,12 +238,12 @@ class TerraDraw {
 
 		// 3 basically remove everything, store, sources and layers
 		this.clear();
-		
+
 		// 4 apply stored snapshot
 		this.addFeatures(snapshot);
 
 		// 5 start once again the same mode the user was in
-		if (currentMode){
+		if (currentMode) {
 			currentMode.start();
 		}
 	}
@@ -241,8 +257,15 @@ class TerraDraw {
 	 *
 	 * @alpha
 	 */
-	setModeStyles(mode: string, styles: TerraDrawAdapterStyling) {
+	setModeStyles<Styling extends Record<string, number | HexColor>>(
+		mode: string,
+		styles: Styling
+	) {
 		this.checkEnabled();
+		if (!this._modes[mode]) {
+			throw new Error("No mode with this name present");
+		}
+
 		this._modes[mode].styles = styles;
 	}
 
@@ -421,8 +444,8 @@ class TerraDraw {
 			onDragStart: (event, setMapDraggability) => {
 				this._mode.onDragStart(event, setMapDraggability);
 			},
-			onDrag: (event) => {
-				this._mode.onDrag(event);
+			onDrag: (event, setMapDraggability) => {
+				this._mode.onDrag(event, setMapDraggability);
 			},
 			onDragEnd: (event, setMapDraggability) => {
 				this._mode.onDragEnd(event, setMapDraggability);

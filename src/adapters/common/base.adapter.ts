@@ -120,7 +120,9 @@ export abstract class TerraDrawBaseAdapter {
 							}
 						);
 					} else if (this._dragState === "dragging") {
-						this._currentModeCallbacks.onDrag(drawEvent);
+						this._currentModeCallbacks.onDrag(drawEvent, (enabled: boolean) => {
+							this.setDraggability.bind(this)(enabled);
+						});
 					}
 				},
 				register: (callback) => {
@@ -214,12 +216,12 @@ export abstract class TerraDrawBaseAdapter {
 
 					if (!this._currentModeCallbacks) return;
 
-					event.preventDefault();
-
 					this._heldKeys.delete(event.key);
 
 					this._currentModeCallbacks.onKeyUp({
 						key: event.key,
+						heldKeys: Array.from(this._heldKeys),
+						preventDefault: () => event.preventDefault(),
 					});
 				},
 				register: (callback) => {
@@ -238,12 +240,12 @@ export abstract class TerraDrawBaseAdapter {
 						return;
 					}
 
-					event.preventDefault();
-
 					this._heldKeys.add(event.key);
 
 					this._currentModeCallbacks.onKeyDown({
 						key: event.key,
+						heldKeys: Array.from(this._heldKeys),
+						preventDefault: () => event.preventDefault(),
 					});
 				},
 				register: (callback) => {

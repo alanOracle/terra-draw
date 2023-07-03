@@ -123,8 +123,8 @@ describe("TerraDrawSelectMode", () => {
 				keyEvents: {
 					deselect: "Backspace",
 					delete: "d",
-					rotate: "r",
-					scale: "s",
+					rotate: ["r"],
+					scale: ["s"],
 				},
 			});
 		});
@@ -1463,7 +1463,11 @@ describe("TerraDrawSelectMode", () => {
 	describe("onKeyUp", () => {
 		describe("Delete", () => {
 			it("does nothing with no features selected", () => {
-				selectMode.onKeyUp({ key: "Delete" });
+				selectMode.onKeyUp({
+					key: "Delete",
+					preventDefault: jest.fn(),
+					heldKeys: ["Delete"],
+				});
 
 				expect(onChange).not.toBeCalled();
 				expect(onDeselect).not.toBeCalled();
@@ -1498,7 +1502,11 @@ describe("TerraDrawSelectMode", () => {
 
 				expect(onSelect).toBeCalledTimes(1);
 
-				selectMode.onKeyUp({ key: "Delete" });
+				selectMode.onKeyUp({
+					key: "Delete",
+					preventDefault: jest.fn(),
+					heldKeys: [],
+				});
 
 				expect(onDeselect).toBeCalledTimes(1);
 
@@ -1513,7 +1521,11 @@ describe("TerraDrawSelectMode", () => {
 
 		describe("Escape", () => {
 			it("does nothing with no features selected", () => {
-				selectMode.onKeyUp({ key: "Escape" });
+				selectMode.onKeyUp({
+					key: "Escape",
+					preventDefault: jest.fn(),
+					heldKeys: [],
+				});
 
 				expect(onChange).not.toBeCalled();
 				expect(onDeselect).not.toBeCalled();
@@ -1540,7 +1552,11 @@ describe("TerraDrawSelectMode", () => {
 
 				expect(onSelect).toBeCalledTimes(1);
 
-				selectMode.onKeyUp({ key: "Escape" });
+				selectMode.onKeyUp({
+					key: "Escape",
+					preventDefault: jest.fn(),
+					heldKeys: [],
+				});
 
 				expect(onChange).toBeCalledTimes(3);
 				expect(onDeselect).toBeCalledTimes(1);
@@ -1622,8 +1638,15 @@ describe("TerraDrawSelectMode", () => {
 
 			addPointToStore([0, 0]);
 
+			// canDrag
 			mockMouseEventBoundingBox();
+			project.mockReturnValueOnce({
+				x: 0,
+				y: 0,
+			});
 
+			// drag
+			mockMouseEventBoundingBox();
 			project.mockReturnValueOnce({
 				x: 0,
 				y: 0,
@@ -1659,14 +1682,18 @@ describe("TerraDrawSelectMode", () => {
 
 	describe("onDrag", () => {
 		it("nothing selected, nothing changes", () => {
-			selectMode.onDrag({
-				lng: 0,
-				lat: 0,
-				containerX: 0,
-				containerY: 0,
-				button: "left",
-				heldKeys: [],
-			});
+			const setMapDraggability = jest.fn();
+			selectMode.onDrag(
+				{
+					lng: 0,
+					lat: 0,
+					containerX: 0,
+					containerY: 0,
+					button: "left",
+					heldKeys: [],
+				},
+				setMapDraggability
+			);
 
 			expect(onChange).toBeCalledTimes(0);
 			expect(onDeselect).toBeCalledTimes(0);
@@ -1695,14 +1722,18 @@ describe("TerraDrawSelectMode", () => {
 			expect(onSelect).toBeCalledTimes(1);
 			expect(onChange).toBeCalledTimes(2);
 
-			selectMode.onDrag({
-				lng: 0,
-				lat: 0,
-				containerX: 0,
-				containerY: 0,
-				button: "left",
-				heldKeys: [],
-			});
+			const setMapDraggability = jest.fn();
+			selectMode.onDrag(
+				{
+					lng: 0,
+					lat: 0,
+					containerX: 0,
+					containerY: 0,
+					button: "left",
+					heldKeys: [],
+				},
+				setMapDraggability
+			);
 
 			expect(onChange).toBeCalledTimes(2);
 		});
@@ -1731,14 +1762,18 @@ describe("TerraDrawSelectMode", () => {
 					expect(onSelect).toBeCalledTimes(1);
 					expect(onChange).toBeCalledTimes(2);
 
-					selectMode.onDrag({
-						lng: 1,
-						lat: 1,
-						containerX: 1,
-						containerY: 1,
-						button: "left",
-						heldKeys: [],
-					});
+					const setMapDraggability = jest.fn();
+					selectMode.onDrag(
+						{
+							lng: 1,
+							lat: 1,
+							containerX: 1,
+							containerY: 1,
+							button: "left",
+							heldKeys: [],
+						},
+						setMapDraggability
+					);
 
 					expect(onChange).toBeCalledTimes(2);
 				});
@@ -1776,14 +1811,18 @@ describe("TerraDrawSelectMode", () => {
 					expect(onSelect).toBeCalledTimes(1);
 					expect(onChange).toBeCalledTimes(2);
 
-					selectMode.onDrag({
-						lng: 1,
-						lat: 1,
-						containerX: 1,
-						containerY: 1,
-						button: "left",
-						heldKeys: [],
-					});
+					const setMapDraggability = jest.fn();
+					selectMode.onDrag(
+						{
+							lng: 1,
+							lat: 1,
+							containerX: 1,
+							containerY: 1,
+							button: "left",
+							heldKeys: [],
+						},
+						setMapDraggability
+					);
 
 					expect(onChange).toBeCalledTimes(2);
 				});
@@ -1833,14 +1872,30 @@ describe("TerraDrawSelectMode", () => {
 						jest.fn()
 					);
 
-					selectMode.onDrag({
-						lng: 1,
-						lat: 1,
-						containerX: 1,
-						containerY: 1,
-						button: "left",
-						heldKeys: [],
+					project.mockReturnValueOnce({
+						x: 0,
+						y: 0,
 					});
+					mockMouseEventBoundingBox();
+
+					project.mockReturnValueOnce({
+						x: 0,
+						y: 0,
+					});
+					mockMouseEventBoundingBox();
+
+					const setMapDraggability = jest.fn();
+					selectMode.onDrag(
+						{
+							lng: 1,
+							lat: 1,
+							containerX: 1,
+							containerY: 1,
+							button: "left",
+							heldKeys: [],
+						},
+						setMapDraggability
+					);
 
 					expect(onChange).toBeCalledTimes(3);
 				});
@@ -1861,7 +1916,24 @@ describe("TerraDrawSelectMode", () => {
 					const idOne = onChange.mock.calls[0][0] as string[];
 
 					mockMouseEventBoundingBox();
+					mockMouseEventBoundingBox();
 					project
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
+						})
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
+						})
 						.mockReturnValueOnce({
 							x: 0,
 							y: 0,
@@ -1897,6 +1969,7 @@ describe("TerraDrawSelectMode", () => {
 					);
 
 					mockMouseEventBoundingBox();
+					mockMouseEventBoundingBox();
 
 					project
 						.mockReturnValueOnce({
@@ -1906,16 +1979,28 @@ describe("TerraDrawSelectMode", () => {
 						.mockReturnValueOnce({
 							x: 1,
 							y: 1,
+						})
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
 						});
 
-					selectMode.onDrag({
-						lng: 1,
-						lat: 1,
-						containerX: 1,
-						containerY: 1,
-						button: "left",
-						heldKeys: [],
-					});
+					const setMapDraggability = jest.fn();
+					selectMode.onDrag(
+						{
+							lng: 1,
+							lat: 1,
+							containerX: 1,
+							containerY: 1,
+							button: "left",
+							heldKeys: [],
+						},
+						setMapDraggability
+					);
 
 					expect(onChange).toBeCalledTimes(3);
 					expect(onChange).toHaveBeenNthCalledWith(3, idOne, "update");
@@ -1938,8 +2023,26 @@ describe("TerraDrawSelectMode", () => {
 
 					expect(onChange).toBeCalledTimes(1);
 
+					// mock for both drag coordinate and drag feature
+					mockMouseEventBoundingBox();
 					mockMouseEventBoundingBox();
 					project
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
+						})
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
+						})
 						.mockReturnValueOnce({
 							x: 0,
 							y: 0,
@@ -1973,6 +2076,8 @@ describe("TerraDrawSelectMode", () => {
 						jest.fn()
 					);
 
+					// mock for both drag coordinate and drag feature
+					mockMouseEventBoundingBox();
 					mockMouseEventBoundingBox();
 					project
 						.mockReturnValueOnce({
@@ -1982,18 +2087,30 @@ describe("TerraDrawSelectMode", () => {
 						.mockReturnValueOnce({
 							x: 1,
 							y: 1,
+						})
+						.mockReturnValueOnce({
+							x: 0,
+							y: 0,
+						})
+						.mockReturnValueOnce({
+							x: 1,
+							y: 1,
 						});
 
-					selectMode.onDrag({
-						lng: 0.5,
-						lat: 0.5,
-						containerX: 0,
-						containerY: 0,
-						button: "left",
-						heldKeys: [],
-					});
+					const setMapDraggability = jest.fn();
+					selectMode.onDrag(
+						{
+							lng: 0.5,
+							lat: 0.5,
+							containerX: 0,
+							containerY: 0,
+							button: "left",
+							heldKeys: [],
+						},
+						setMapDraggability
+					);
 
-					expect(onChange).toBeCalledTimes(3);
+					expect(onChange).toBeCalledTimes(2);
 				});
 			});
 		});
@@ -2053,6 +2170,17 @@ describe("TerraDrawSelectMode", () => {
 					"create"
 				);
 
+				mockMouseEventBoundingBox();
+				project
+					.mockReturnValueOnce({
+						x: 100,
+						y: 100,
+					})
+					.mockReturnValue({
+						x: 0,
+						y: 0,
+					});
+
 				selectMode.onDragStart(
 					{
 						lng: 1,
@@ -2065,14 +2193,18 @@ describe("TerraDrawSelectMode", () => {
 					jest.fn()
 				);
 
-				selectMode.onDrag({
-					lng: 1,
-					lat: 1,
-					containerX: 1,
-					containerY: 1,
-					button: "left",
-					heldKeys: [],
-				});
+				const setMapDraggability = jest.fn();
+				selectMode.onDrag(
+					{
+						lng: 1,
+						lat: 1,
+						containerX: 1,
+						containerY: 1,
+						button: "left",
+						heldKeys: [],
+					},
+					setMapDraggability
+				);
 
 				expect(onChange).toBeCalledTimes(5);
 
@@ -2148,6 +2280,17 @@ describe("TerraDrawSelectMode", () => {
 					"create"
 				);
 
+				mockMouseEventBoundingBox();
+				project
+					.mockReturnValueOnce({
+						x: 100,
+						y: 100,
+					})
+					.mockReturnValue({
+						x: 0,
+						y: 0,
+					});
+
 				selectMode.onDragStart(
 					{
 						lng: 1,
@@ -2160,14 +2303,18 @@ describe("TerraDrawSelectMode", () => {
 					jest.fn()
 				);
 
-				selectMode.onDrag({
-					lng: 1,
-					lat: 1,
-					containerX: 1,
-					containerY: 1,
-					button: "left",
-					heldKeys: [],
-				});
+				const setMapDraggability = jest.fn();
+				selectMode.onDrag(
+					{
+						lng: 1,
+						lat: 1,
+						containerX: 1,
+						containerY: 1,
+						button: "left",
+						heldKeys: [],
+					},
+					setMapDraggability
+				);
 
 				expect(onChange).toBeCalledTimes(5);
 

@@ -33,7 +33,6 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		if (typeof styling !== "object") {
 			throw new Error("Styling must be an object");
 		}
-
 		this.onStyleChange([], "styling");
 		this._styles = styling;
 	}
@@ -142,7 +141,10 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		event: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void
 	) {}
-	onDrag(event: TerraDrawMouseEvent) {}
+	onDrag(
+		event: TerraDrawMouseEvent,
+		setMapDraggability: (enabled: boolean) => void
+	) {}
 	onDragEnd(
 		event: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void

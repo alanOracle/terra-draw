@@ -15,53 +15,81 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 		super(config);
 	}
 
+	private draggedFeatureId: string | null = null;
+
 	private dragPosition: Position | undefined;
 
-	get position() {
-		return this.dragPosition ? this.dragPosition.concat() : undefined;
+	// get position() {
+	// 	return this.dragPosition ? this.dragPosition.concat() : undefined;
+	// }
+
+	// set position(newPosition: undefined | Position) {
+	// 	if (newPosition === undefined) {
+	// 		this.dragPosition = undefined;
+	// 		return;
+	// 	}
+
+	// 	if (
+	// 		!Array.isArray(newPosition) ||
+	// 		newPosition.length !== 2 ||
+	// 		typeof newPosition[0] !== "number" ||
+	// 		typeof newPosition[1] !== "number"
+	// 	) {
+	// 		throw new Error("Position must be [number, number] array");
+	// 	}
+
+	// 	this.dragPosition = newPosition.concat();
+	// }
+
+	startDragging(event: TerraDrawMouseEvent, id: string) {
+		this.draggedFeatureId = id;
+		this.dragPosition = [event.lng, event.lat];
 	}
 
-	set position(newPosition: undefined | Position) {
-		if (newPosition === undefined) {
-			this.dragPosition = undefined;
+	stopDragging() {
+		this.draggedFeatureId = null;
+		this.dragPosition = undefined;
+	}
+
+	isDragging() {
+		return this.draggedFeatureId !== null;
+	}
+
+	canDrag(event: TerraDrawMouseEvent, selectedId: string) {
+		const { clickedFeature } = this.featuresAtMouseEvent.find(event, true);
+
+		// If the cursor is not over the selected
+		// feature then we don't want to drag
+		if (!clickedFeature || clickedFeature.id !== selectedId) {
+			return false;
+		}
+
+		return true;
+	}
+
+	drag(event: TerraDrawMouseEvent) {
+		if (!this.draggedFeatureId) {
 			return;
 		}
 
-		if (
-			!Array.isArray(newPosition) ||
-			newPosition.length !== 2 ||
-			typeof newPosition[0] !== "number" ||
-			typeof newPosition[1] !== "number"
-		) {
-			throw new Error("Position must be [number, number] array");
-		}
-
-		this.dragPosition = newPosition.concat();
-	}
-
-	drag(event: TerraDrawMouseEvent, selectedId: string) {
-
-		if (event.setDraggability) {
-			event.setDraggability(false);
-		}
-
-		const geometry = this.store.getGeometryCopy(selectedId);
+		const geometry = this.store.getGeometryCopy(this.draggedFeatureId);
 		const mouseCoord = [event.lng, event.lat];
 
 		// Update the geometry of the dragged feature
 		if (geometry.type === "Polygon" || geometry.type === "LineString") {
-			let updatedCoords: Position[] | undefined;
-			let upToCoord: number | undefined;
+			let updatedCoords: Position[];
+			let upToCoord: number;
 
 			if (geometry.type === "Polygon") {
 				updatedCoords = geometry.coordinates[0];
 				upToCoord = updatedCoords.length - 1;
-			} else if (geometry.type === "LineString") {
+			} else {
+				// Must be LineString here
 				updatedCoords = geometry.coordinates;
 				upToCoord = updatedCoords.length;
 			}
 
-			if (upToCoord === undefined || !updatedCoords || !this.dragPosition) {
+			if (!this.dragPosition) {
 				return false;
 			}
 
@@ -71,7 +99,12 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 			];
 
 			// Validation function to prevent delta to go outside a certain range
-			function validateDeltaRange(deltaIdx: number,position: Position,min: number,max: number){
+			function validateDeltaRange(
+				deltaIdx: number,
+				position: Position,
+				min: number,
+				max: number
+			) {
 				const updatedCoordinate = position[deltaIdx] - delta[deltaIdx];
 				if (updatedCoordinate < min) delta[deltaIdx] = min - position[deltaIdx];
 				if (updatedCoordinate > max) delta[deltaIdx] = max - position[deltaIdx];
@@ -81,12 +114,30 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 			for (let i = 0; i < upToCoord; i++) {
 				const coordinate = updatedCoords[i];
 				// validateDeltaRange(0,coordinate,-180,180);
-				validateDeltaRange(1,coordinate,-85,85);
+				validateDeltaRange(1, coordinate, -85, 85);
 			}
 
 			for (let i = 0; i < upToCoord; i++) {
 				const coordinate = updatedCoords[i];
-				updatedCoords[i] = [coordinate[0] - delta[0], coordinate[1] - delta[1]];
+				const delta = [
+					this.dragPosition[0] - mouseCoord[0],
+					this.dragPosition[1] - mouseCoord[1],
+				];
+
+				const updatedLng = coordinate[0] - delta[0];
+				const updatedLat = coordinate[1] - delta[1];
+
+				// Ensure that coordinates are valid
+				if (
+					updatedLng > 180 ||
+					updatedLng < -180 ||
+					updatedLat > 90 ||
+					updatedLat < -90
+				) {
+					return false;
+				}
+
+				updatedCoords[i] = [updatedLng, coordinate[1] - delta[1]];
 			}
 
 			// Set final coordinate identical to first
@@ -105,10 +156,12 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 
 			// Issue the update to the selected feature
 			this.store.updateGeometry([
-				{ id: selectedId, geometry },
+				{ id: this.draggedFeatureId, geometry },
 				...updatedSelectionPoints,
 				...updatedMidPoints,
 			]);
+
+			this.dragPosition = [event.lng, event.lat];
 
 			// Update mid point positions
 		} else if (geometry.type === "Point") {
@@ -116,13 +169,15 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 			// to the dragged position
 			this.store.updateGeometry([
 				{
-					id: selectedId,
+					id: this.draggedFeatureId,
 					geometry: {
 						type: "Point",
 						coordinates: mouseCoord,
 					},
 				},
 			]);
+
+			this.dragPosition = [event.lng, event.lat];
 		}
 	}
 }

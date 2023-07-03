@@ -32,14 +32,16 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * */
 	private clearLayers() {
 		if (this._rendered) {
-			["point", "linestring", "polygon"].forEach((geometryKey) => {
+			const geometryTypes = ["point", "linestring", "polygon"] as const;
+			geometryTypes.forEach((geometryKey) => {
 				const id = `td-${geometryKey.toLowerCase()}`;
 				if (this._map.getLayer(id)) this._map.removeLayer(id);
 
 				// Special case for polygons as it has another id for the outline
 				// that we need to make sure we remove
 				if (geometryKey === "polygon") {
-					if (this._map.getLayer(id + "-outline")) this._map.removeLayer(id + "-outline");
+					if (this._map.getLayer(id + "-outline"))
+						this._map.removeLayer(id + "-outline");
 				}
 				if (this._map.getSource(id)) this._map.removeSource(id);
 			});
@@ -191,11 +193,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		points: boolean;
 		linestrings: boolean;
 		polygons: boolean;
+		styling: boolean;
 	} = {
 		deletion: false,
 		points: false,
 		linestrings: false,
 		polygons: false,
+		styling: false,
 	};
 
 	private updateChangedIds(changes: TerraDrawChanges) {
@@ -211,6 +215,14 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 
 		if (changes.deletedIds.length > 0) {
 			this.changedIds.deletion = true;
+		}
+
+		if (
+			changes.created.length === 0 &&
+			changes.updated.length === 0 &&
+			changes.deletedIds.length === 0
+		) {
+			this.changedIds.styling = true;
 		}
 	}
 
@@ -241,8 +253,12 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 */
 	public setDraggability(enabled: boolean) {
 		if (enabled) {
+			// Mapbox GL has both drag rotation and drag panning interactions
+			// hence having to enable/disable both
+			this._map.dragRotate.enable();
 			this._map.dragPan.enable();
 		} else {
+			this._map.dragRotate.disable();
 			this._map.dragPan.disable();
 		}
 	}
@@ -275,8 +291,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * Sets the cursor style for the map container.
 	 * @param cursor The CSS cursor style to apply, or 'unset' to remove any previously applied cursor style.
 	 */
-	public setCursor(style: Parameters<SetCursor>[0]) {
-		this._map.getCanvas().style.cursor = style;
+	public setCursor(cursor: Parameters<SetCursor>[0]) {
+		const canvas = this._map.getCanvas();
+		if (cursor === "unset") {
+			canvas.style.removeProperty("cursor");
+		} else {
+			canvas.style.cursor = cursor;
+		}
 	}
 
 	/**
@@ -299,116 +320,109 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	public render(changes: TerraDrawChanges, styling: TerraDrawStylingFunction) {
 		this.updateChangedIds(changes);
 
-			// Get a map of the changed feature IDs by geometry type
-			// We use this to determine which MB layers need to be updated
+		// Get a map of the changed feature IDs by geometry type
+		// We use this to determine which MB layers need to be updated
 
-			const features = [
-				...changes.created,
-				...changes.updated,
-				...changes.unchanged,
-			];
+		const features = [
+			...changes.created,
+			...changes.updated,
+			...changes.unchanged,
+		];
 
-			const geometryFeatures = this.getEmptyGeometries();
+		const geometryFeatures = this.getEmptyGeometries();
 
-			for (let i = 0; i < features.length; i++) {
-				const feature = features[i];
+		for (let i = 0; i < features.length; i++) {
+			const feature = features[i];
 
-				if (feature.geometry.type === "Point") {
+			Object.keys(styling).forEach((mode) => {
+				const { properties } = feature;
+
+				if (properties.mode !== mode) {
+					return;
 				}
 
-				Object.keys(styling).forEach((mode) => {
-					const { properties } = feature;
+				const styles = styling[mode](feature);
 
-					if (properties.mode !== mode) {
-						return;
-					}
+				if (feature.geometry.type === "Point") {
+					properties.pointColor = styles.pointColor;
+					properties.pointOutlineColor = styles.pointOutlineColor;
+					properties.pointOutlineWidth = styles.pointOutlineWidth;
+					properties.pointWidth = styles.pointWidth;
+					geometryFeatures.points.push(feature);
+				} else if (feature.geometry.type === "LineString") {
+					properties.lineStringColor = styles.lineStringColor;
+					properties.lineStringWidth = styles.lineStringWidth;
+					geometryFeatures.linestrings.push(feature);
+				} else if (feature.geometry.type === "Polygon") {
+					properties.polygonFillColor = styles.polygonFillColor;
+					properties.polygonFillOpacity = styles.polygonFillOpacity;
+					properties.polygonOutlineColor = styles.polygonOutlineColor;
+					properties.polygonOutlineWidth = styles.polygonOutlineWidth;
+					geometryFeatures.polygons.push(feature);
+				}
+			});
+		}
 
-					const styles = styling[mode](feature);
+		const { points, linestrings, polygons } = geometryFeatures;
 
-					if (feature.geometry.type === "Point") {
-						properties.pointColor = styles.pointColor;
-						properties.pointOutlineColor = styles.pointOutlineColor;
-						properties.pointOutlineWidth = styles.pointOutlineWidth;
-						properties.pointWidth = styles.pointWidth;
-						geometryFeatures.points.push(feature);
-					} else if (feature.geometry.type === "LineString") {
-						properties.lineStringColor = styles.lineStringColor;
-						properties.lineStringWidth = styles.lineStringWidth;
-						geometryFeatures.linestrings.push(feature);
-					} else if (feature.geometry.type === "Polygon") {
-						properties.polygonFillColor = styles.polygonFillColor;
-						properties.polygonFillOpacity = styles.polygonFillOpacity;
-						properties.polygonOutlineColor = styles.polygonOutlineColor;
-						properties.polygonOutlineWidth = styles.polygonOutlineWidth;
-						geometryFeatures.polygons.push(feature);
-					}
-				});
+		if (!this._rendered) {
+			this._addGeoJSONLayer<Point>("Point", points as Feature<Point>[]);
+			this._addGeoJSONLayer<LineString>(
+				"LineString",
+				linestrings as Feature<LineString>[]
+			);
+			this._addGeoJSONLayer<Polygon>("Polygon", polygons as Feature<Polygon>[]);
+			this._rendered = true;
+		} else {
+			// If deletion occured we always have to update all layers
+			// as we don't know the type (TODO: perhaps we could pass that back?)
+			const deletionOccured = this.changedIds.deletion;
+			const styleUpdatedOccured = this.changedIds.styling;
+			const forceUpdate = deletionOccured || styleUpdatedOccured;
+
+			// Determine if we need to update each layer by geometry type
+			const updatePoints = forceUpdate || this.changedIds.points;
+			const updateLineStrings = forceUpdate || this.changedIds.linestrings;
+			const updatedPolygon = forceUpdate || this.changedIds.polygons;
+
+			let pointId;
+			if (updatePoints) {
+				pointId = this._setGeoJSONLayerData<Point>(
+					"Point",
+					points as Feature<Point>[]
+				);
 			}
 
-			const { points, linestrings, polygons } = geometryFeatures;
-
-			if (!this._rendered) {
-				this._addGeoJSONLayer<Point>("Point", points as Feature<Point>[]);
-				this._addGeoJSONLayer<LineString>(
+			if (updateLineStrings) {
+				this._setGeoJSONLayerData<LineString>(
 					"LineString",
 					linestrings as Feature<LineString>[]
 				);
-				this._addGeoJSONLayer<Polygon>(
+			}
+
+			if (updatedPolygon) {
+				this._setGeoJSONLayerData<Polygon>(
 					"Polygon",
 					polygons as Feature<Polygon>[]
 				);
-				this._rendered = true;
-			} else {
-				// If deletion occured we always have to update all layers
-				// as we don't know the type (TODO: perhaps we could pass that back?)
-				const deletionOccured = this.changedIds.deletion;
-
-				// If unchanged is the only one with features means is updating the style
-				const styleChangeOccured = Object.values(this.changedIds).every(change=>!change) && changes.unchanged.length > 0;
-
-				// Determine if we need to update each layer by geometry type
-				const updatePoints = deletionOccured || styleChangeOccured || this.changedIds.points;
-				const updateLineStrings =
-					deletionOccured || styleChangeOccured || this.changedIds.linestrings;
-				const updatedPolygon = deletionOccured || styleChangeOccured || this.changedIds.polygons;
-
-				let pointId;
-				if (updatePoints) {
-					pointId = this._setGeoJSONLayerData<Point>(
-						"Point",
-						points as Feature<Point>[]
-					);
-				}
-
-				if (updateLineStrings) {
-					this._setGeoJSONLayerData<LineString>(
-						"LineString",
-						linestrings as Feature<LineString>[]
-					);
-				}
-
-				if (updatedPolygon) {
-					this._setGeoJSONLayerData<Polygon>(
-						"Polygon",
-						polygons as Feature<Polygon>[]
-					);
-				}
-
-				// TODO: This logic could be better - I think this will render the selection points above user
-				// defined layers outside of TerraDraw which is perhaps unideal
-				
-				// Ensure selection/mid points are rendered on top
-				pointId && this._map.getLayer(pointId) && this._map.moveLayer(pointId);
 			}
-			// Copyright © [2023,] , Oracle and/or its affiliates.
 
-			// Reset changed ids
-			this.changedIds = {
-				points: false,
-				linestrings: false,
-				polygons: false,
-				deletion: false,
-			};
+			// TODO: This logic could be better - I think this will render the selection points above user
+			// defined layers outside of TerraDraw which is perhaps unideal
+
+			// Ensure selection/mid points are rendered on top
+			pointId && this._map.getLayer(pointId) && this._map.moveLayer(pointId);
+		}
+		// Copyright © [2023,] , Oracle and/or its affiliates.
+
+		// Reset changed ids
+		this.changedIds = {
+			points: false,
+			linestrings: false,
+			polygons: false,
+			deletion: false,
+			styling: false,
+		};
 	}
 
 	/**

@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.1-alpha.38](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.37...v0.0.1-alpha.38) (2023-07-02)
+
+
+### Bug Fixes
+
+* ensure styling is updated for MapboxGL/MapLibreGL style only updates ([baa63da](https://github.com/JamesLMilner/terra-draw/commit/baa63dad92f5dd02c694a34b359502fb889f325d))
+* ensure terra draw instance is enabled on event callback ([bdc22f8](https://github.com/JamesLMilner/terra-draw/commit/bdc22f8162a803e7e39f5475a189465d668a7f77))
+* handle select mode dragging features out of lat/lng bounds ([52bd009](https://github.com/JamesLMilner/terra-draw/commit/52bd009e5b5a8c8386b9ee1f6da959c111f4b443))
+
+
+### Chore
+
+* update docs ([6229136](https://github.com/JamesLMilner/terra-draw/commit/62291369e9e1f6610be2fcc10dd3f70f261d2a52))
+
+### [0.0.1-alpha.37](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.36...v0.0.1-alpha.37) (2023-07-01)
+
+
+### Bug Fixes
+
+* enable/disable drag rotations in MapboxGL/MapLibre adapters when calling setDraggability ([8c62512](https://github.com/JamesLMilner/terra-draw/commit/8c6251227215aa9cb966aca040d6e8a2d46c28da))
+* handle errors in unproject in openlayers adapter ([bc117fa](https://github.com/JamesLMilner/terra-draw/commit/bc117fa95b87452578e2edaf6f0b6bb79ff428af))
+* resolve several issues with selection ([820f7a6](https://github.com/JamesLMilner/terra-draw/commit/820f7a60d909d64945b3c2b7e8649ef0fc95c920))
+
+
+### Chore
+
+* increase test coverage ([514be2f](https://github.com/JamesLMilner/terra-draw/commit/514be2f0bc71a12e919c37d25e8d308940366b73))
+
+### [0.0.1-alpha.36](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.35...v0.0.1-alpha.36) (2023-06-20)
+
+
+### Bug Fixes
+
+* ensure that preventDefault is only called when necessary for keyboard inputs ([108e20d](https://github.com/JamesLMilner/terra-draw/commit/108e20d8e6048cf7d1145c53e3bc4c7c227c8a19))
+
+### [0.0.1-alpha.35](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.34...v0.0.1-alpha.35) (2023-06-13)
+
+
+### Bug Fixes
+
+* fix clearLayers not working correctly for mapbox/maplibre adapters ([f80db0e](https://github.com/JamesLMilner/terra-draw/commit/f80db0e4162826c6d9d4ef817de76b25fdaf80f1))
+* fix failing polygon mode unit test ([65ba076](https://github.com/JamesLMilner/terra-draw/commit/65ba076741e610a1b9c9eaa6baa5d71d4a1a85b8))
+* fix styling issues for polygon and select modes ([d8e852c](https://github.com/JamesLMilner/terra-draw/commit/d8e852cbac3f76dfbc3dabc09d1aa4d0cc541ca3))
+
 ### [0.0.1-alpha.34](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.33...v0.0.1-alpha.34) (2023-06-11)
 
 

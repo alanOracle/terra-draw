@@ -37,10 +37,19 @@ export interface TerraDrawMouseEvent {
 
 export interface TerraDrawKeyboardEvent {
 	key: string;
+	heldKeys: string[];
+	preventDefault: () => void;
 }
 
 export type SetCursor = (
-	cursor: "unset" | "grab" | "grabbing" | "crosshair" | "pointer" | "wait" | "move"
+	cursor:
+		| "unset"
+		| "grab"
+		| "grabbing"
+		| "crosshair"
+		| "pointer"
+		| "wait"
+		| "move"
 ) => void;
 
 export type Project = (lng: number, lat: number) => { x: number; y: number };
@@ -81,7 +90,10 @@ export interface TerraDrawCallbacks {
 		event: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void
 	) => void;
-	onDrag: (event: TerraDrawMouseEvent) => void;
+	onDrag: (
+		event: TerraDrawMouseEvent,
+		setMapDraggability: (enabled: boolean) => void
+	) => void;
 	onDragEnd: (
 		event: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void
