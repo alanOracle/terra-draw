@@ -93,30 +93,6 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 				return false;
 			}
 
-			const delta = [
-				this.dragPosition[0] - mouseCoord[0],
-				this.dragPosition[1] - mouseCoord[1],
-			];
-
-			// Validation function to prevent delta to go outside a certain range
-			function validateDeltaRange(
-				deltaIdx: number,
-				position: Position,
-				min: number,
-				max: number
-			) {
-				const updatedCoordinate = position[deltaIdx] - delta[deltaIdx];
-				if (updatedCoordinate < min) delta[deltaIdx] = min - position[deltaIdx];
-				if (updatedCoordinate > max) delta[deltaIdx] = max - position[deltaIdx];
-			}
-
-			// make delta to not update a coordinate outside the map
-			for (let i = 0; i < upToCoord; i++) {
-				const coordinate = updatedCoords[i];
-				// validateDeltaRange(0,coordinate,-180,180);
-				validateDeltaRange(1, coordinate, -85, 85);
-			}
-
 			for (let i = 0; i < upToCoord; i++) {
 				const coordinate = updatedCoords[i];
 				const delta = [

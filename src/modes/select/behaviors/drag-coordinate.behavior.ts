@@ -100,10 +100,6 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 			geometry.type === "Polygon" &&
 			(index === geomCoordinates.length - 1 || index === 0);
 
-		if (event.setDraggability) {
-			event.setDraggability(false);
-		}
-
 		// Store the updated coord
 		const updatedCoordinate = [event.lng, event.lat];
 

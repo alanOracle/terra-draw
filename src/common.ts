@@ -32,7 +32,6 @@ export interface TerraDrawMouseEvent {
 	containerY: number;
 	button: "neither" | "left" | "middle" | "right";
 	heldKeys: string[];
-	setDraggability?: (enabled: boolean) => void;
 }
 
 export interface TerraDrawKeyboardEvent {

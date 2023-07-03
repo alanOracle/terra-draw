@@ -33,10 +33,6 @@ export class ScaleFeatureBehavior extends TerraDrawModeBehavior {
 			return;
 		}
 
-		if (event.setDraggability) {
-			event.setDraggability(false);
-		}
-
 		const mouseCoord = [event.lng, event.lat];
 
 		const distance = haversineDistanceKilometers(
