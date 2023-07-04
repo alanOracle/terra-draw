@@ -378,7 +378,10 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 					"LineString",
 					linestrings as Feature<LineString>[]
 				);
-				this._addGeoJSONLayer<Polygon>("Polygon", polygons as Feature<Polygon>[]);
+				this._addGeoJSONLayer<Polygon>(
+					"Polygon",
+					polygons as Feature<Polygon>[]
+				);
 				this._rendered = true;
 			} else {
 				// If deletion occured we always have to update all layers

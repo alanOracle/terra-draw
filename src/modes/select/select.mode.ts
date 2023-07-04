@@ -516,34 +516,11 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			this.dragCoordinate.startDragging(selectedId, draggableCoordinateIndex);
 			setMapDraggability(false);
 
-			// Set auxiliar variables
-			let clickedSelectionIndex = -1;
-			let clickedFeatureDistance = Infinity;
-
-			// Find the index of the selected coordinate in selectionPoints
-			this.selectionPoints.ids.forEach((id: string, index: number) => {
-				const geometry = this.store.getGeometryCopy<Point>(id);
-				const distance = this.pixelDistance.measure(
-					event,
-					geometry.coordinates
-				);
-
-				if (
-					distance < this.pointerDistance &&
-					distance < clickedFeatureDistance
-				) {
-					clickedFeatureDistance = distance;
-					clickedSelectionIndex = index;
-				}
-			});
-
-			// If we were able to find it, we delete that single selection point to improve performance
+			// We delete the single selection point to improve performance
 			// Since thats the only point actually moving when dragging a coordinate
-			if (clickedSelectionIndex >= 0) {
-				this.selectionPoints.deleteSingle(clickedSelectionIndex);
-			}
+			this.selectionPoints.deleteSingle(draggableCoordinateIndex);
 
-			// Also deleting all midpoints (Also for performance to avoid updating them when dragging a coordinate)
+			// Also deleting all midpoints (Again for performance to avoid updating them when dragging a coordinate)
 			this.midPoints.delete();
 			return;
 		}
