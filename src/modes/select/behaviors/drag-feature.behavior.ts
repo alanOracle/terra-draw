@@ -4,6 +4,7 @@ import { FeaturesAtMouseEventBehavior } from "./features-at-mouse-event.behavior
 import { Position } from "geojson";
 import { SelectionPointBehavior } from "./selection-point.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
+import { limitPrecision } from "./../../../geometry/limit-decimal-precision";
 
 export class DragFeatureBehavior extends TerraDrawModeBehavior {
 	constructor(
@@ -113,7 +114,8 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 					return false;
 				}
 
-				updatedCoords[i] = [updatedLng, coordinate[1] - delta[1]];
+				// Also limit precision
+				updatedCoords[i] = [limitPrecision(updatedLng, this.coordinatePrecision), limitPrecision(coordinate[1] - delta[1], this.coordinatePrecision)];
 			}
 
 			// Set final coordinate identical to first
