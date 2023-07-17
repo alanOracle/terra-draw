@@ -3,7 +3,7 @@ import {
 	SetCursor,
 	TerraDrawStylingFunction,
 } from "../common";
-import { Feature, LineString, Point, Polygon } from "geojson";
+import { Feature, GeoJsonProperties, LineString, Point, Polygon } from "geojson";
 import mapboxgl, {
 	CircleLayer,
 	FillLayer,
@@ -310,6 +310,15 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		}
 	}
 
+	// Assigns default style if not already defined in the properties
+	private assignIfNull(properties: GeoJsonProperties,styles: any,propertyNames: string[]){
+		if (properties){
+			propertyNames.forEach(propertyName=>{
+				properties[propertyName] = properties[propertyName] ?? styles[propertyName];
+			});
+		}
+	}
+
 	/**
 	 * Renders GeoJSON features on the map using the provided styling configuration.
 	 * @param changes An object containing arrays of created, updated, and unchanged features to render.
@@ -351,20 +360,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 					const styles = styling[mode](feature);
 
 					if (feature.geometry.type === "Point") {
-						properties.pointColor = styles.pointColor;
-						properties.pointOutlineColor = styles.pointOutlineColor;
-						properties.pointOutlineWidth = styles.pointOutlineWidth;
-						properties.pointWidth = styles.pointWidth;
+						this.assignIfNull(properties,styles,['pointColor','pointOutlineColor','pointOutlineWidth','pointWidth']);
 						geometryFeatures.points.push(feature);
 					} else if (feature.geometry.type === "LineString") {
-						properties.lineStringColor = styles.lineStringColor;
-						properties.lineStringWidth = styles.lineStringWidth;
+						this.assignIfNull(properties,styles,['lineStringColor','lineStringWidth']);
 						geometryFeatures.linestrings.push(feature);
 					} else if (feature.geometry.type === "Polygon") {
-						properties.polygonFillColor = styles.polygonFillColor;
-						properties.polygonFillOpacity = styles.polygonFillOpacity;
-						properties.polygonOutlineColor = styles.polygonOutlineColor;
-						properties.polygonOutlineWidth = styles.polygonOutlineWidth;
+						this.assignIfNull(properties,styles,['polygonFillColor','polygonFillOpacity','polygonOutlineColor','polygonOutlineWidth']);
 						geometryFeatures.polygons.push(feature);
 					}
 				});
