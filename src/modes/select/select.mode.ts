@@ -741,6 +741,16 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			.clickedFeature;
 	}
 
+	// Returns whether or not an event is near a selection point
+	getSelectionPointAtMouseEvent(event: TerraDrawMouseEvent) {
+		return this.selectionPoints.ids.some((id: string) => {
+			const geometry = this.store.getGeometryCopy<Point>(id);
+			const distance = this.pixelDistance.measure(event, geometry.coordinates);
+
+			return distance < this.pointerDistance;
+		});
+	}
+
 	// Method to create the selection and mid points of the selected feature
 	createSelectionAndMidPoints() {
 		const selectedId = this.selected[0];
