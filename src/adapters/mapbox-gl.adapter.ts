@@ -435,6 +435,13 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				deletion: false,
 				styling: false,
 			};
+
+			// Make sure terradraw layers are on top of all others
+			["point", "linestring", "polygon"].forEach(geometryKey => {
+				const id = `td-${geometryKey.toLowerCase()}`;
+				if (this._map.getLayer(id)) this._map.moveLayer(id);
+				if (geometryKey === "polygon") if (this._map.getLayer(id + "-outline")) this._map.moveLayer(id + "-outline");
+			});
 		});
 	}
 
