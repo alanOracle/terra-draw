@@ -61,6 +61,11 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		});
 	}
 
+	private _applyColorIfNotSelected(propertyName: string){
+		const selectedColor = '#fc0307';
+		return ['case', ['to-boolean', ['get', 'selected']], selectedColor , ["get", propertyName]];
+	}
+
 	private _addFillLayer(id: string) {
 		return this._map.addLayer({
 			id,
@@ -68,7 +73,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			type: "fill",
 			// No need for filters as style is driven by properties
 			paint: {
-				"fill-color": ["get", "polygonFillColor"],
+				"fill-color": this._applyColorIfNotSelected('polygonFillColor'),
 				"fill-opacity": ["get", "polygonFillOpacity"],
 			},
 		} as FillLayer);
@@ -82,7 +87,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			// No need for filters as style is driven by properties
 			paint: {
 				"line-width": ["get", "polygonOutlineWidth"],
-				"line-color": ["get", "polygonOutlineColor"],
+				"line-color": this._applyColorIfNotSelected('polygonOutlineColor'),
 				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
@@ -102,7 +107,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			// No need for filters as style is driven by properties
 			paint: {
 				"line-width": ["get", "lineStringWidth"],
-				"line-color": ["get", "lineStringColor"],
+				"line-color": this._applyColorIfNotSelected('lineStringColor'),
 				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
@@ -121,10 +126,10 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			type: "circle",
 			// No need for filters as style is driven by properties
 			paint: {
-				"circle-stroke-color": ["get", "pointOutlineColor"],
+				"circle-stroke-color": this._applyColorIfNotSelected('pointOutlineColor'),
 				"circle-stroke-width": ["get", "pointOutlineWidth"],
 				"circle-radius": ["get", "pointWidth"],
-				"circle-color": ["get", "pointColor"],
+				"circle-color": this._applyColorIfNotSelected('pointColor'),
 			},
 		} as CircleLayer);
 		if (beneath) {
