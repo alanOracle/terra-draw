@@ -1,11 +1,12 @@
 {
 	"name": "terra-draw",
-	"version": "0.0.1-alpha.38",
+	"version": "0.0.1-alpha.41",
 	"description": "Frictionless map drawing across mapping provider",
 	"scripts": {
 		"docs": "typedoc",
 		"docs:serve": "serve ./docs",
 		"release": "standard-version",
+		"release:alpha:next": "ts-node --esm ./scripts/next-alpha-version.ts",
 		"build": "microbundle",
 		"watch": "microbundle --watch --format modern",
 		"test": "jest --config jest.config.ts",
@@ -68,7 +69,7 @@
 		"jest": "^29.3.1",
 		"leaflet": "^1.8.0",
 		"mapbox-gl": "^2.13.0",
-		"maplibre-gl": "^2.4.0",
+		"maplibre-gl": "3.2.0",
 		"microbundle": "^0.15.0",
 		"ol": "^7.1.0",
 		"serve": "^14.1.2",
@@ -148,5 +149,8 @@
 				"section": "Reverts"
 			}
 		]
+	},
+	"dependencies": {
+		"ts-node": "^10.9.1"
 	}
 }

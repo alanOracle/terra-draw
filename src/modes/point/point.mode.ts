@@ -1,8 +1,8 @@
-import { Feature, Point } from "geojson";
 import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
-	HexColor,
+	NumericStyling,
+	HexColorStyling,
 } from "../../common";
 import { GeoJSONStoreFeatures } from "../../store/store";
 import { getDefaultStyling } from "../../util/styling";
@@ -10,10 +10,10 @@ import { TerraDrawBaseDrawMode } from "../base.mode";
 import { isValidPoint } from "../../geometry/boolean/is-valid-point";
 
 type PointModeStyling = {
-	pointWidth: number;
-	pointColor: HexColor;
-	pointOutlineColor: HexColor;
-	pointOutlineWidth: number;
+	pointWidth: NumericStyling;
+	pointColor: HexColorStyling;
+	pointOutlineColor: HexColorStyling;
+	pointOutlineWidth: NumericStyling;
 };
 export class TerraDrawPointMode extends TerraDrawBaseDrawMode<PointModeStyling> {
 	mode = "point";
@@ -85,20 +85,29 @@ export class TerraDrawPointMode extends TerraDrawBaseDrawMode<PointModeStyling> 
 			feature.geometry.type === "Point" &&
 			feature.properties.mode === this.mode
 		) {
-			if (this.styles.pointColor) {
-				styles.pointColor = this.styles.pointColor;
-			}
-			if (this.styles.pointOutlineColor) {
-				styles.pointOutlineColor = this.styles.pointOutlineColor;
-			}
-			if (this.styles.pointOutlineWidth) {
-				styles.pointOutlineWidth = this.styles.pointOutlineWidth;
-			}
-			if (this.styles.pointWidth) {
-				styles.pointWidth = this.styles.pointWidth;
-			}
+			styles.pointWidth = this.getNumericStylingValue(
+				this.styles.pointWidth,
+				styles.pointWidth,
+				feature
+			);
 
-			return styles;
+			styles.pointColor = this.getHexColorStylingValue(
+				this.styles.pointColor,
+				styles.pointColor,
+				feature
+			);
+
+			styles.pointOutlineColor = this.getHexColorStylingValue(
+				this.styles.pointOutlineColor,
+				styles.pointOutlineColor,
+				feature
+			);
+
+			styles.pointOutlineWidth = this.getNumericStylingValue(
+				this.styles.pointOutlineWidth,
+				2,
+				feature
+			);
 		}
 
 		return styles;

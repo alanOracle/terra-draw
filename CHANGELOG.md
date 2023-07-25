@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.0.1-alpha.41 (2023-07-16)
+
+
+### Chore
+
+* alpha release script ([7b743ab](https://github.com/JamesLMilner/terra-draw/commit/7b743ab48ec8db0a294373d9a3c2c066945a2fe4))
+
+### [0.0.1-alpha.40](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.39...v0.0.1-alpha.40) (2023-07-15)
+
+
+### Features
+
+* more robust handling of select mode styling ([b5350cc](https://github.com/JamesLMilner/terra-draw/commit/b5350cc50671b890067efdd54aba8a806328a3ae))
+
+
+### Chore
+
+* add instructions on how to style selected data to getting started guide ([c012773](https://github.com/JamesLMilner/terra-draw/commit/c01277300098be207601b44ea2a04ebf01ffd73d))
+
+### [0.0.1-alpha.39](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.38...v0.0.1-alpha.39) (2023-07-15)
+
+
+### Bug Fixes
+
+* ensure projection is available in google maps adapter to prevent errors ([3d0a60d](https://github.com/JamesLMilner/terra-draw/commit/3d0a60d825d9218fcbe990a9e31bb392f8bd3605))
+* make sure points in point mode that are selected are visibly different ([8016a2e](https://github.com/JamesLMilner/terra-draw/commit/8016a2ea4656337e81524cdf066d800b9d1496fe))
+
 ### [0.0.1-alpha.38](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.37...v0.0.1-alpha.38) (2023-07-02)
 
 

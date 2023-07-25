@@ -4,9 +4,11 @@ import {
 	SELECT_PROPERTIES,
 	HexColor,
 	TerraDrawAdapterStyling,
+	HexColorStyling,
+	NumericStyling,
 } from "../../common";
 import { Point, Position } from "geojson";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import { ModeTypes, TerraDrawBaseDrawMode } from "../base.mode";
 import { MidPointBehavior } from "./behaviors/midpoint.behavior";
 import { SelectionPointBehavior } from "./behaviors/selection-point.behavior";
 import { FeaturesAtMouseEventBehavior } from "./behaviors/features-at-mouse-event.behavior";
@@ -41,21 +43,38 @@ type ModeFlags = {
 };
 
 type SelectionStyling = {
-	selectedColor: HexColor;
-	selectedPointOutlineColor: HexColor;
-	selectPointOutlineWidth: number;
-	selectionPointWidth: number;
-	selectionPointColor: HexColor;
-	selectionPointOutlineColor: HexColor;
-	selectionPointOutlineWidth: number;
-	midPointColor: HexColor;
-	midPointOutlineColor: HexColor;
-	midPointWidth: number;
-	midPointOutlineWidth: number;
+	// Point
+	selectedPointColor: HexColorStyling;
+	selectedPointWidth: NumericStyling;
+	selectedPointOutlineColor: HexColorStyling;
+	selectedPointOutlineWidth: NumericStyling;
+
+	// LineString
+	selectedLineStringColor: HexColorStyling;
+	selectedLineStringWidth: NumericStyling;
+
+	// Polygon
+	selectedPolygonColor: HexColorStyling;
+	selectedPolygonFillOpacity: NumericStyling;
+	selectedPolygonOutlineColor: HexColorStyling;
+	selectedPolygonOutlineWidth: NumericStyling;
+
+	// Selection Points (points at vertices of a polygon/linestring feature)
+	selectionPointWidth: NumericStyling;
+	selectionPointColor: HexColorStyling;
+	selectionPointOutlineColor: HexColorStyling;
+	selectionPointOutlineWidth: NumericStyling;
+
+	// Mid points (points at mid point of a polygon/linestring feature)
+	midPointColor: HexColorStyling;
+	midPointOutlineColor: HexColorStyling;
+	midPointWidth: NumericStyling;
+	midPointOutlineWidth: NumericStyling;
 };
 
 export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling> {
-	mode = "select";
+	public type = ModeTypes.Select;
+	public mode = "select";
 
 	private dragEventThrottle = 5;
 	private dragEventCount = 0;
@@ -670,53 +689,142 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	styleFeature(feature: GeoJSONStoreFeatures): TerraDrawAdapterStyling {
 		const styles = { ...getDefaultStyling() };
 
-		if (feature.properties.mode === this.mode) {
-			if (feature.geometry.type === "Polygon") {
-				if (this.styles.selectedColor) {
-					styles.polygonFillColor = this.styles.selectedColor;
-				}
-				if (this.styles.selectedColor) {
-					styles.polygonOutlineColor = this.styles.selectedColor;
-				}
-				styles.zIndex = 10;
+		if (
+			feature.properties.mode === this.mode &&
+			feature.geometry.type === "Point"
+		) {
+			if (feature.properties.selectionPoint) {
+				styles.pointColor = this.getHexColorStylingValue(
+					this.styles.selectionPointColor,
+					styles.pointColor,
+					feature
+				);
+
+				styles.pointOutlineColor = this.getHexColorStylingValue(
+					this.styles.selectionPointOutlineColor,
+					styles.pointOutlineColor,
+					feature
+				);
+
+				styles.pointWidth = this.getNumericStylingValue(
+					this.styles.selectionPointWidth,
+					styles.pointWidth,
+					feature
+				);
+
+				styles.pointOutlineWidth = this.getNumericStylingValue(
+					this.styles.selectionPointOutlineWidth,
+					2,
+					feature
+				);
+
+				styles.zIndex = 30;
+
 				return styles;
 			}
 
-			if (feature.geometry.type === "Point") {
-				if (feature.properties.selectionPoint) {
-					styles.pointColor =
-						this.styles.selectionPointColor || styles.pointColor;
-					styles.pointOutlineColor =
-						this.styles.selectionPointOutlineColor || styles.pointOutlineColor;
-					styles.pointWidth =
-						this.styles.selectionPointWidth !== undefined
-							? this.styles.selectionPointWidth
-							: styles.pointWidth;
-					styles.pointOutlineWidth =
-						this.styles.selectPointOutlineWidth !== undefined
-							? this.styles.selectPointOutlineWidth
-							: 2;
-					styles.zIndex = 30;
+			if (feature.properties.midPoint) {
+				styles.pointColor = this.getHexColorStylingValue(
+					this.styles.midPointColor,
+					styles.pointColor,
+					feature
+				);
 
-					return styles;
-				}
+				styles.pointOutlineColor = this.getHexColorStylingValue(
+					this.styles.midPointOutlineColor,
+					styles.pointOutlineColor,
+					feature
+				);
 
-				if (feature.properties.midPoint) {
-					styles.pointColor = this.styles.midPointColor || styles.pointColor;
-					styles.pointOutlineColor =
-						this.styles.midPointOutlineColor || styles.pointOutlineColor;
-					styles.pointWidth =
-						this.styles.midPointWidth !== undefined
-							? this.styles.midPointWidth
-							: 4;
-					styles.pointOutlineWidth =
-						this.styles.midPointOutlineWidth !== undefined
-							? this.styles.midPointOutlineWidth
-							: 2;
-					styles.zIndex = 40;
+				styles.pointWidth = this.getNumericStylingValue(
+					this.styles.midPointWidth,
+					4,
+					feature
+				);
 
-					return styles;
-				}
+				styles.pointOutlineWidth = this.getNumericStylingValue(
+					this.styles.midPointOutlineWidth,
+					2,
+					feature
+				);
+
+				styles.zIndex = 40;
+
+				return styles;
+			}
+		} else if (feature.properties[SELECT_PROPERTIES.SELECTED]) {
+			// Select mode shortcuts the styling of a feature if it is selected
+			// A selected feature from another mode will end up in this block
+
+			if (feature.geometry.type === "Polygon") {
+				styles.polygonFillColor = this.getHexColorStylingValue(
+					this.styles.selectedPolygonColor,
+					styles.polygonFillColor,
+					feature
+				);
+
+				styles.polygonOutlineWidth = this.getNumericStylingValue(
+					this.styles.selectedPolygonOutlineWidth,
+					styles.polygonOutlineWidth,
+					feature
+				);
+
+				styles.polygonOutlineColor = this.getHexColorStylingValue(
+					this.styles.selectedPolygonOutlineColor,
+					styles.polygonOutlineColor,
+					feature
+				);
+
+				styles.polygonFillOpacity = this.getNumericStylingValue(
+					this.styles.selectedPolygonFillOpacity,
+					styles.polygonFillOpacity,
+					feature
+				);
+
+				styles.zIndex = 10;
+				return styles;
+			} else if (feature.geometry.type === "LineString") {
+				styles.lineStringColor = this.getHexColorStylingValue(
+					this.styles.selectedLineStringColor,
+					styles.lineStringColor,
+					feature
+				);
+
+				styles.lineStringWidth = this.getNumericStylingValue(
+					this.styles.selectedLineStringWidth,
+					styles.lineStringWidth,
+					feature
+				);
+
+				styles.zIndex = 10;
+				return styles;
+			} else if (feature.geometry.type === "Point") {
+				styles.pointWidth = this.getNumericStylingValue(
+					this.styles.selectedPointWidth,
+					styles.pointWidth,
+					feature
+				);
+
+				styles.pointColor = this.getHexColorStylingValue(
+					this.styles.selectedPointColor,
+					styles.pointColor,
+					feature
+				);
+
+				styles.pointOutlineColor = this.getHexColorStylingValue(
+					this.styles.selectedPointOutlineColor,
+					styles.pointOutlineColor,
+					feature
+				);
+
+				styles.pointOutlineWidth = this.getNumericStylingValue(
+					this.styles.selectedPointOutlineWidth,
+					styles.pointOutlineWidth,
+					feature
+				);
+
+				styles.zIndex = 10;
+				return styles;
 			}
 		}
 
