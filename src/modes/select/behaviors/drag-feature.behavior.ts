@@ -4,7 +4,7 @@ import { FeaturesAtMouseEventBehavior } from "./features-at-mouse-event.behavior
 import { Position } from "geojson";
 import { SelectionPointBehavior } from "./selection-point.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
-import { limitPrecision } from "./../../../geometry/limit-decimal-precision";
+import { limitPrecision } from "../../../geometry/limit-decimal-precision";
 
 export class DragFeatureBehavior extends TerraDrawModeBehavior {
 	constructor(
@@ -101,10 +101,20 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 					this.dragPosition[1] - mouseCoord[1],
 				];
 
-				const updatedLng = coordinate[0] - delta[0];
-				const updatedLat = coordinate[1] - delta[1];
+				// Keep precision limited when calculating new coordinates
+				const updatedLng = limitPrecision(
+					coordinate[0] - delta[0],
+					this.config.coordinatePrecision
+				);
 
-				// Ensure that coordinates are valid
+				const updatedLat = limitPrecision(
+					coordinate[1] - delta[1],
+					this.config.coordinatePrecision
+				);
+
+				// Ensure that coordinates do not exceed
+				// lng lat limits. Long term we may want to figure out
+				// proper handling of anti meridian crossings
 				if (
 					updatedLng > 180 ||
 					updatedLng < -180 ||
@@ -114,8 +124,7 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 					return false;
 				}
 
-				// Also limit precision
-				updatedCoords[i] = [limitPrecision(updatedLng, this.coordinatePrecision), limitPrecision(coordinate[1] - delta[1], this.coordinatePrecision)];
+				updatedCoords[i] = [updatedLng, updatedLat];
 			}
 
 			// Set final coordinate identical to first
