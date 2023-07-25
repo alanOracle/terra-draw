@@ -3,7 +3,7 @@ import {
 	SetCursor,
 	TerraDrawStylingFunction,
 } from "../common";
-import { Feature, GeoJsonProperties, LineString, Point, Polygon } from "geojson";
+import { Feature, LineString, Point, Polygon } from "geojson";
 import mapboxgl, {
 	CircleLayer,
 	FillLayer,
@@ -61,11 +61,6 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		});
 	}
 
-	private _applyColorIfNotSelected(propertyName: string){
-		const selectedColor = '#fc0307';
-		return ['case', ['to-boolean', ['get', 'selected']], selectedColor , ["get", propertyName]];
-	}
-
 	private _addFillLayer(id: string) {
 		return this._map.addLayer({
 			id,
@@ -73,7 +68,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			type: "fill",
 			// No need for filters as style is driven by properties
 			paint: {
-				"fill-color": this._applyColorIfNotSelected('polygonFillColor'),
+				"fill-color": ["get", "polygonFillColor"],
 				"fill-opacity": ["get", "polygonFillOpacity"],
 			},
 		} as FillLayer);
@@ -87,7 +82,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			// No need for filters as style is driven by properties
 			paint: {
 				"line-width": ["get", "polygonOutlineWidth"],
-				"line-color": this._applyColorIfNotSelected('polygonOutlineColor'),
+				"line-color": ["get", "polygonOutlineColor"],
 				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
@@ -107,7 +102,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			// No need for filters as style is driven by properties
 			paint: {
 				"line-width": ["get", "lineStringWidth"],
-				"line-color": this._applyColorIfNotSelected('lineStringColor'),
+				"line-color": ["get", "lineStringColor"],
 				"line-dasharray": [1, 1],
 			},
 		} as LineLayer);
@@ -126,10 +121,10 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			type: "circle",
 			// No need for filters as style is driven by properties
 			paint: {
-				"circle-stroke-color": this._applyColorIfNotSelected('pointOutlineColor'),
+				"circle-stroke-color": ["get", "pointOutlineColor"],
 				"circle-stroke-width": ["get", "pointOutlineWidth"],
 				"circle-radius": ["get", "pointWidth"],
-				"circle-color": this._applyColorIfNotSelected('pointColor'),
+				"circle-color": ["get", "pointColor"],
 			},
 		} as CircleLayer);
 		if (beneath) {
@@ -315,15 +310,6 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		}
 	}
 
-	// Assigns default style if not already defined in the properties
-	private assignIfNull(properties: GeoJsonProperties,styles: any,propertyNames: string[]){
-		if (properties){
-			propertyNames.forEach(propertyName=>{
-				properties[propertyName] = properties[propertyName] ?? styles[propertyName];
-			});
-		}
-	}
-
 	/**
 	 * Renders GeoJSON features on the map using the provided styling configuration.
 	 * @param changes An object containing arrays of created, updated, and unchanged features to render.
@@ -365,13 +351,20 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 					const styles = styling[mode](feature);
 
 					if (feature.geometry.type === "Point") {
-						this.assignIfNull(properties,styles,['pointColor','pointOutlineColor','pointOutlineWidth','pointWidth']);
+						properties.pointColor = styles.pointColor;
+						properties.pointOutlineColor = styles.pointOutlineColor;
+						properties.pointOutlineWidth = styles.pointOutlineWidth;
+						properties.pointWidth = styles.pointWidth;
 						geometryFeatures.points.push(feature);
 					} else if (feature.geometry.type === "LineString") {
-						this.assignIfNull(properties,styles,['lineStringColor','lineStringWidth']);
+						properties.lineStringColor = styles.lineStringColor;
+						properties.lineStringWidth = styles.lineStringWidth;
 						geometryFeatures.linestrings.push(feature);
 					} else if (feature.geometry.type === "Polygon") {
-						this.assignIfNull(properties,styles,['polygonFillColor','polygonFillOpacity','polygonOutlineColor','polygonOutlineWidth']);
+						properties.polygonFillColor = styles.polygonFillColor;
+						properties.polygonFillOpacity = styles.polygonFillOpacity;
+						properties.polygonOutlineColor = styles.polygonOutlineColor;
+						properties.polygonOutlineWidth = styles.polygonOutlineWidth;
 						geometryFeatures.polygons.push(feature);
 					}
 				});
@@ -442,7 +435,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			};
 
 			// Make sure terradraw layers are on top of all others
-			["point", "linestring", "polygon"].forEach(geometryKey => {
+			["linestring", "polygon", "point"].forEach(geometryKey => {
 				const id = `td-${geometryKey.toLowerCase()}`;
 				if (this._map.getLayer(id)) this._map.moveLayer(id);
 				if (geometryKey === "polygon") if (this._map.getLayer(id + "-outline")) this._map.moveLayer(id + "-outline");
