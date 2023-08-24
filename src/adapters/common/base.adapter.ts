@@ -51,6 +51,8 @@ export abstract class TerraDrawBaseAdapter {
 					// triggered so this._lastDrawEvent will not get set in
 					// pointermove listener, so we must set it here.
 					this._lastDrawEvent = drawEvent;
+
+					this._currentModeCallbacks?.onPointerDown(drawEvent);
 				},
 				register: (callback) => {
 					this.getMapContainer().addEventListener("pointerdown", callback);
@@ -99,7 +101,7 @@ export abstract class TerraDrawBaseAdapter {
 						// drawing as doing in on selection can cause janky
 						// behaviours
 						const modeState = this._currentModeCallbacks.getState();
-						if (modeState === "drawing") {
+						if (modeState !== "selected") { //modifythis._currentModeCallbacks.onClick(drawEvent);
 							// We want to ignore very small pointer movements when holding
 							// the map down as these are normally done by accident when
 							// drawing and is not an intended drag

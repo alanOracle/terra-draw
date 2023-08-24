@@ -411,6 +411,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 	/** @internal */
 	stop() {
+		this.setStarted();
 		this.cleanUp();
 		this.setStopped();
 	}
@@ -560,6 +561,59 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		}
 	}
 
+	// Method to figure out if an event is going to be interpreted as DRAG and set "selected" state if so
+	/** @internal */
+	onPointerDown(event: TerraDrawMouseEvent){
+		// We only need to stop the map dragging if
+		// we actually have something selected
+		if (!this.selected.length) {
+			return;
+		}
+
+		// If the selected feature is not draggable
+		// don't do anything
+		const properties = this.store.getPropertiesCopy(this.selected[0]);
+		const modeFlags = this.flags[properties.mode as string];
+		const draggable =
+			modeFlags &&
+			modeFlags.feature &&
+			(modeFlags.feature.draggable ||
+				(modeFlags.feature.coordinates &&
+					modeFlags.feature.coordinates.draggable));
+
+
+		if (!draggable) {
+			return;
+		}
+
+		const selectedId = this.selected[0];
+		const draggableCoordinateIndex = this.dragCoordinate.getDraggableIndex(
+			event,
+			selectedId
+		);
+
+		if (
+			modeFlags &&
+			modeFlags.feature &&
+			modeFlags.feature.coordinates &&
+			modeFlags.feature.coordinates.draggable &&
+			draggableCoordinateIndex !== -1
+		) {
+			this.setSelected();
+			return;
+		}
+
+		if (
+			modeFlags &&
+			modeFlags.feature &&
+			modeFlags.feature.draggable &&
+			this.dragFeature.canDrag(event, selectedId)
+		) {
+			this.setSelected();
+			return;
+		}
+	}
+
 	/** @internal */
 	onDrag(
 		event: TerraDrawMouseEvent,
@@ -643,6 +697,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		// Re construct all selection and midpoints
 		if (this.dragCoordinate.isDragging() || this.dragFeature.isDragging()) {
 			this.createSelectionAndMidPoints();
+			this.setStarted();
 		}
 
 		this.dragCoordinate.stopDragging();

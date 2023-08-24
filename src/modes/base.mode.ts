@@ -82,7 +82,18 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		if (this._state === "started") {
 			this._state = "drawing";
 		} else {
-			throw new Error("Mode must be unregistered or stopped to start");
+			throw new Error("Mode must be started to be drawing");
+		}
+	}
+
+	protected setSelected() {
+		if (
+			this._state === "started" ||
+			this._state === "selected"
+		) {
+			this._state = "selected";
+		} else {
+			throw new Error("Mode must be started to be selected");
 		}
 	}
 
@@ -90,7 +101,9 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		if (
 			this._state === "stopped" ||
 			this._state === "registered" ||
-			this._state === "drawing"
+			this._state === "drawing" ||
+			this._state === "selected" ||
+			this._state === "started"
 		) {
 			this._state = "started";
 			this.setDoubleClickToZoom(false);
@@ -163,6 +176,7 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		event: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void
 	) {}
+	onPointerDown?(event: TerraDrawMouseEvent){}
 
 	protected getHexColorStylingValue(
 		value: HexColor | ((feature: GeoJSONStoreFeatures) => HexColor) | undefined,
