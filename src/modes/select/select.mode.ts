@@ -418,6 +418,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 	/** @internal */
 	onClick(event: TerraDrawMouseEvent) {
+		this.setStarted();
 		if (event.button === "right") {
 			this.onRightClick(event);
 			return;
@@ -697,9 +698,9 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		// Re construct all selection and midpoints
 		if (this.dragCoordinate.isDragging() || this.dragFeature.isDragging()) {
 			this.createSelectionAndMidPoints();
-			this.setStarted();
 		}
 
+		this.setStarted();
 		this.dragCoordinate.stopDragging();
 		this.dragFeature.stopDragging();
 	}
