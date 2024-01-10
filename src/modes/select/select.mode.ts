@@ -199,7 +199,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.selected = [];
 	}
 
-	private onRightClick(event: TerraDrawMouseEvent) {
+	onRightClick(event: TerraDrawMouseEvent) {
 		if (!this.selectionPoints.ids.length) {
 			return;
 		}
@@ -420,7 +420,8 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	onClick(event: TerraDrawMouseEvent) {
 		this.setStarted();
 		if (event.button === "right") {
-			this.onRightClick(event);
+			// onRightClick will be only progrmatically callable
+			// this.onRightClick(event);
 			return;
 		} else if (event.button === "left") {
 			this.onLeftClick(event);
