@@ -106,7 +106,6 @@ export interface TerraDrawCallbacks {
 		setMapDraggability: (enabled: boolean) => void
 	) => void;
 	onClear: () => void;
-	onPointerDown: (event: TerraDrawMouseEvent) => void;
 }
 
 export interface TerraDrawChanges {

@@ -461,11 +461,6 @@ class TerraDraw {
 			onDragEnd: (event, setMapDraggability) => {
 				this._mode.onDragEnd(event, setMapDraggability);
 			},
-			onPointerDown: (event) => {
-				if (this._mode.onPointerDown){
-					this._mode.onPointerDown(event);
-				}
-			},
 			onClear: () => {
 				// Ensure that the mode resets its state
 				// as it may be storing feature ids internally in it's instance
