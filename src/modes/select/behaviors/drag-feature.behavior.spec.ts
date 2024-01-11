@@ -1,4 +1,3 @@
-import { Position } from "geojson";
 import { createStorePolygon } from "../../../test/create-store-features";
 import { mockBehaviorConfig } from "../../../test/mock-behavior-config";
 import { mockDrawEvent } from "../../../test/mock-mouse-event";
@@ -6,7 +5,7 @@ import { BehaviorConfig } from "../../base.behavior";
 import { ClickBoundingBoxBehavior } from "../../click-bounding-box.behavior";
 import { PixelDistanceBehavior } from "../../pixel-distance.behavior";
 import { DragFeatureBehavior } from "./drag-feature.behavior";
-import { FeaturesAtMouseEventBehavior } from "./features-at-mouse-event.behavior";
+import { FeatureAtPointerEventBehavior } from "./feature-at-pointer-event.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
 import { SelectionPointBehavior } from "./selection-point.behavior";
 
@@ -15,21 +14,21 @@ describe("DragFeatureBehavior", () => {
 		it("constructs", () => {
 			const config = mockBehaviorConfig("test");
 			const selectionPointBehavior = new SelectionPointBehavior(config);
-			const featuresAtMouseEventBehavior = new FeaturesAtMouseEventBehavior(
+			const featureAtPointerEventBehavior = new FeatureAtPointerEventBehavior(
 				config,
 				new ClickBoundingBoxBehavior(config),
-				new PixelDistanceBehavior(config)
+				new PixelDistanceBehavior(config),
 			);
 			const midpointBehavior = new MidPointBehavior(
 				config,
-				selectionPointBehavior
+				selectionPointBehavior,
 			);
 
 			new DragFeatureBehavior(
 				config,
-				featuresAtMouseEventBehavior,
+				featureAtPointerEventBehavior,
 				selectionPointBehavior,
-				midpointBehavior
+				midpointBehavior,
 			);
 		});
 	});
@@ -41,21 +40,21 @@ describe("DragFeatureBehavior", () => {
 		beforeEach(() => {
 			config = mockBehaviorConfig("test");
 			const selectionPointBehavior = new SelectionPointBehavior(config);
-			const featuresAtMouseEventBehavior = new FeaturesAtMouseEventBehavior(
+			const featureAtPointerEventBehavior = new FeatureAtPointerEventBehavior(
 				config,
 				new ClickBoundingBoxBehavior(config),
-				new PixelDistanceBehavior(config)
+				new PixelDistanceBehavior(config),
 			);
 			const midpointBehavior = new MidPointBehavior(
 				config,
-				selectionPointBehavior
+				selectionPointBehavior,
 			);
 
 			dragFeatureBehavior = new DragFeatureBehavior(
 				config,
-				featuresAtMouseEventBehavior,
+				featureAtPointerEventBehavior,
 				selectionPointBehavior,
-				midpointBehavior
+				midpointBehavior,
 			);
 		});
 

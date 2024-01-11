@@ -3,7 +3,12 @@ import {
 	NumericStyling,
 	TerraDrawAdapterStyling,
 } from "../../common";
-import { ModeTypes, TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	ModeTypes,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { BehaviorConfig } from "../base.behavior";
 import { getDefaultStyling } from "../../util/styling";
 import { GeoJSONStoreFeatures } from "../../terra-draw";
@@ -25,12 +30,20 @@ type RenderModeStyling = {
 	zIndex: NumericStyling;
 };
 
+interface TerraDrawRenderModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	modeName: string;
+	// styles need to be there else we could fall back to BaseModeOptions
+	styles: Partial<T>;
+}
+
 export class TerraDrawRenderMode extends TerraDrawBaseDrawMode<RenderModeStyling> {
 	public type = ModeTypes.Render; // The type of the mode
 	public mode = "render"; // This gets changed dynamically
 
-	constructor(options: { styles: Partial<RenderModeStyling> }) {
+	constructor(options: TerraDrawRenderModeOptions<RenderModeStyling>) {
 		super({ styles: options.styles });
+		this.mode = options.modeName;
 	}
 
 	/** @internal */
@@ -84,57 +97,57 @@ export class TerraDrawRenderMode extends TerraDrawBaseDrawMode<RenderModeStyling
 			pointColor: this.getHexColorStylingValue(
 				this.styles.pointColor,
 				defaultStyles.pointColor,
-				feature
+				feature,
 			),
 			pointWidth: this.getNumericStylingValue(
 				this.styles.pointWidth,
 				defaultStyles.pointWidth,
-				feature
+				feature,
 			),
 			pointOutlineColor: this.getHexColorStylingValue(
 				this.styles.pointOutlineColor,
 				defaultStyles.pointOutlineColor,
-				feature
+				feature,
 			),
 			pointOutlineWidth: this.getNumericStylingValue(
 				this.styles.pointOutlineWidth,
 				defaultStyles.pointOutlineWidth,
-				feature
+				feature,
 			),
 			polygonFillColor: this.getHexColorStylingValue(
 				this.styles.polygonFillColor,
 				defaultStyles.polygonFillColor,
-				feature
+				feature,
 			),
 			polygonFillOpacity: this.getNumericStylingValue(
 				this.styles.polygonFillOpacity,
 				defaultStyles.polygonFillOpacity,
-				feature
+				feature,
 			),
 			polygonOutlineColor: this.getHexColorStylingValue(
 				this.styles.polygonOutlineColor,
 				defaultStyles.polygonOutlineColor,
-				feature
+				feature,
 			),
 			polygonOutlineWidth: this.getNumericStylingValue(
 				this.styles.polygonOutlineWidth,
 				defaultStyles.polygonOutlineWidth,
-				feature
+				feature,
 			),
 			lineStringWidth: this.getNumericStylingValue(
 				this.styles.lineStringWidth,
 				defaultStyles.lineStringWidth,
-				feature
+				feature,
 			),
 			lineStringColor: this.getHexColorStylingValue(
 				this.styles.lineStringColor,
 				defaultStyles.lineStringColor,
-				feature
+				feature,
 			),
 			zIndex: this.getNumericStylingValue(
 				this.styles.zIndex,
 				defaultStyles.zIndex,
-				feature
+				feature,
 			),
 		};
 	}

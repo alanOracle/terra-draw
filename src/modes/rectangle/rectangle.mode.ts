@@ -1,15 +1,19 @@
-import { Feature, Polygon, Position } from "geojson";
+import { Position } from "geojson";
 import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
 	TerraDrawKeyboardEvent,
-	HexColor,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { GeoJSONStoreFeatures } from "../../store/store";
 import { getDefaultStyling } from "../../util/styling";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { isValidNonIntersectingPolygonFeature } from "../../geometry/boolean/is-valid-polygon-feature";
 
 type TerraDrawRectangleModeKeyEvents = {
@@ -24,18 +28,39 @@ type RectanglePolygonStyling = {
 	fillOpacity: NumericStyling;
 };
 
+interface Cursors {
+	start?: Cursor;
+}
+
+interface TerraDrawRectangleModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	keyEvents?: TerraDrawRectangleModeKeyEvents | null;
+	cursors?: Cursors;
+}
+
 export class TerraDrawRectangleMode extends TerraDrawBaseDrawMode<RectanglePolygonStyling> {
 	mode = "rectangle";
 	private center: Position | undefined;
 	private clickCount = 0;
 	private currentRectangleId: string | undefined;
 	private keyEvents: TerraDrawRectangleModeKeyEvents;
+	private cursors: Required<Cursors>;
 
-	constructor(options?: {
-		styles?: Partial<RectanglePolygonStyling>;
-		keyEvents?: TerraDrawRectangleModeKeyEvents | null;
-	}) {
+	constructor(
+		options?: TerraDrawRectangleModeOptions<RectanglePolygonStyling>,
+	) {
 		super(options);
+
+		const defaultCursors = {
+			start: "crosshair",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
+
 		// We want to have some defaults, but also allow key bindings
 		// to be explicitly turned off
 		if (options?.keyEvents === null) {
@@ -91,7 +116,7 @@ export class TerraDrawRectangleMode extends TerraDrawBaseDrawMode<RectanglePolyg
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 	}
 
 	/** @internal */
@@ -186,25 +211,25 @@ export class TerraDrawRectangleMode extends TerraDrawBaseDrawMode<RectanglePolyg
 			styles.polygonFillColor = this.getHexColorStylingValue(
 				this.styles.fillColor,
 				styles.polygonFillColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineColor = this.getHexColorStylingValue(
 				this.styles.outlineColor,
 				styles.polygonOutlineColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineWidth = this.getNumericStylingValue(
 				this.styles.outlineWidth,
 				styles.polygonOutlineWidth,
-				feature
+				feature,
 			);
 
 			styles.polygonFillOpacity = this.getNumericStylingValue(
 				this.styles.fillOpacity,
 				styles.polygonFillOpacity,
-				feature
+				feature,
 			);
 
 			return styles;

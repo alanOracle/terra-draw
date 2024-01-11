@@ -2,12 +2,16 @@ import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
 	TerraDrawKeyboardEvent,
-	HexColor,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { LineString } from "geojson";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { BehaviorConfig } from "../base.behavior";
 import { getDefaultStyling } from "../../util/styling";
 import { GeoJSONStoreFeatures } from "../../store/store";
@@ -30,6 +34,19 @@ type GreateCircleStyling = {
 	closingPointOutlineWidth: NumericStyling;
 };
 
+interface Cursors {
+	start?: Cursor;
+	close?: Cursor;
+}
+
+interface TerraDrawGreatCircleModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	snapping?: boolean;
+	pointerDistance?: number;
+	keyEvents?: TerraDrawGreateCircleModeKeyEvents | null;
+	cursors?: Cursors;
+}
+
 export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircleStyling> {
 	mode = "greatcircle";
 
@@ -38,17 +55,24 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 	private closingPointId: string | undefined;
 	private keyEvents: TerraDrawGreateCircleModeKeyEvents;
 	private snappingEnabled: boolean;
+	private cursors: Required<Cursors>;
 
 	// Behaviors
 	private snapping!: GreatCircleSnappingBehavior;
 
-	constructor(options?: {
-		snapping?: boolean;
-		pointerDistance?: number;
-		styles?: Partial<GreateCircleStyling>;
-		keyEvents?: TerraDrawGreateCircleModeKeyEvents | null;
-	}) {
+	constructor(options?: TerraDrawGreatCircleModeOptions<GreateCircleStyling>) {
 		super(options);
+
+		const defaultCursors = {
+			start: "crosshair",
+			close: "pointer",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
 
 		this.snappingEnabled =
 			options && options.snapping !== undefined ? options.snapping : false;
@@ -92,14 +116,14 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 		this.snapping = new GreatCircleSnappingBehavior(
 			config,
 			new PixelDistanceBehavior(config),
-			new ClickBoundingBoxBehavior(config)
+			new ClickBoundingBoxBehavior(config),
 		);
 	}
 
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 	}
 
 	/** @internal */
@@ -111,7 +135,7 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 
 		if (!this.currentId && this.currentCoordinate === 0) {
 			return;
@@ -135,7 +159,7 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 			]);
 
 			const currentLineGeometry = this.store.getGeometryCopy<LineString>(
-				this.currentId
+				this.currentId,
 			);
 
 			// Remove the 'live' point that changes on mouse move
@@ -256,13 +280,13 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 			styles.lineStringColor = this.getHexColorStylingValue(
 				this.styles.lineStringColor,
 				styles.lineStringColor,
-				feature
+				feature,
 			);
 
 			styles.lineStringWidth = this.getNumericStylingValue(
 				this.styles.lineStringWidth,
 				styles.lineStringWidth,
-				feature
+				feature,
 			);
 
 			return styles;
@@ -274,25 +298,25 @@ export class TerraDrawGreatCircleMode extends TerraDrawBaseDrawMode<GreateCircle
 			styles.pointColor = this.getHexColorStylingValue(
 				this.styles.closingPointColor,
 				styles.pointColor,
-				feature
+				feature,
 			);
 
 			styles.pointWidth = this.getNumericStylingValue(
 				this.styles.closingPointWidth,
 				styles.pointWidth,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineColor = this.getHexColorStylingValue(
 				this.styles.closingPointOutlineColor,
 				"#ffffff",
-				feature
+				feature,
 			);
 
 			styles.pointOutlineWidth = this.getNumericStylingValue(
 				this.styles.closingPointOutlineWidth,
 				2,
-				feature
+				feature,
 			);
 
 			return styles;

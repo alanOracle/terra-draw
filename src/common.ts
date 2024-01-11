@@ -48,6 +48,12 @@ export interface TerraDrawKeyboardEvent {
 	preventDefault: () => void;
 }
 
+export type Required<T> = {
+	[P in keyof T]-?: T[P];
+};
+
+export type Cursor = Parameters<SetCursor>[0];
+
 export type SetCursor = (
 	cursor:
 		| "unset"
@@ -56,7 +62,7 @@ export type SetCursor = (
 		| "crosshair"
 		| "pointer"
 		| "wait"
-		| "move"
+		| "move",
 ) => void;
 
 export type Project = (lng: number, lat: number) => { x: number; y: number };
@@ -77,6 +83,7 @@ export interface TerraDrawModeRegisterConfig {
 	onFinish: (finishedId: string) => void;
 	project: Project;
 	unproject: Unproject;
+	coordinatePrecision: number;
 }
 
 export type TerraDrawModeState =
@@ -84,7 +91,7 @@ export type TerraDrawModeState =
 	| "registered"
 	| "started"
 	| "drawing"
-	| "selected"
+	| "selecting"
 	| "stopped";
 
 export interface TerraDrawCallbacks {
@@ -95,15 +102,15 @@ export interface TerraDrawCallbacks {
 	onMouseMove: (event: TerraDrawMouseEvent) => void;
 	onDragStart: (
 		event: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) => void;
 	onDrag: (
 		event: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) => void;
 	onDragEnd: (
 		event: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) => void;
 	onClear: () => void;
 }
@@ -123,12 +130,14 @@ export interface TerraDrawAdapter {
 	project: Project;
 	unproject: Unproject;
 	setCursor: SetCursor;
+	getLngLatFromEvent: GetLngLatFromEvent;
 	setDoubleClickToZoom: (enabled: boolean) => void;
-	getMapContainer: () => HTMLElement;
+	getMapEventElement: () => HTMLElement;
 	register(callbacks: TerraDrawCallbacks): void;
 	unregister(): void;
 	render(changes: TerraDrawChanges, styling: TerraDrawStylingFunction): void;
 	clear(): void;
+	getCoordinatePrecision(): number;
 }
 
 export const SELECT_PROPERTIES = {

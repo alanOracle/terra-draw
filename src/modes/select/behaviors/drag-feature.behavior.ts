@@ -1,6 +1,6 @@
 import { TerraDrawMouseEvent } from "../../../common";
 import { BehaviorConfig, TerraDrawModeBehavior } from "../../base.behavior";
-import { FeaturesAtMouseEventBehavior } from "./features-at-mouse-event.behavior";
+import { FeatureAtPointerEventBehavior } from "./feature-at-pointer-event.behavior";
 import { Position } from "geojson";
 import { SelectionPointBehavior } from "./selection-point.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
@@ -9,9 +9,9 @@ import { limitPrecision } from "../../../geometry/limit-decimal-precision";
 export class DragFeatureBehavior extends TerraDrawModeBehavior {
 	constructor(
 		readonly config: BehaviorConfig,
-		private readonly featuresAtMouseEvent: FeaturesAtMouseEventBehavior,
+		private readonly featuresAtMouseEvent: FeatureAtPointerEventBehavior,
 		private readonly selectionPoints: SelectionPointBehavior,
-		private readonly midPoints: MidPointBehavior
+		private readonly midPoints: MidPointBehavior,
 	) {
 		super(config);
 	}
@@ -19,28 +19,6 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 	private draggedFeatureId: string | null = null;
 
 	private dragPosition: Position | undefined;
-
-	// get position() {
-	// 	return this.dragPosition ? this.dragPosition.concat() : undefined;
-	// }
-
-	// set position(newPosition: undefined | Position) {
-	// 	if (newPosition === undefined) {
-	// 		this.dragPosition = undefined;
-	// 		return;
-	// 	}
-
-	// 	if (
-	// 		!Array.isArray(newPosition) ||
-	// 		newPosition.length !== 2 ||
-	// 		typeof newPosition[0] !== "number" ||
-	// 		typeof newPosition[1] !== "number"
-	// 	) {
-	// 		throw new Error("Position must be [number, number] array");
-	// 	}
-
-	// 	this.dragPosition = newPosition.concat();
-	// }
 
 	startDragging(event: TerraDrawMouseEvent, id: string) {
 		this.draggedFeatureId = id;
@@ -104,12 +82,12 @@ export class DragFeatureBehavior extends TerraDrawModeBehavior {
 				// Keep precision limited when calculating new coordinates
 				const updatedLng = limitPrecision(
 					coordinate[0] - delta[0],
-					this.config.coordinatePrecision
+					this.config.coordinatePrecision,
 				);
 
 				const updatedLat = limitPrecision(
 					coordinate[1] - delta[1],
-					this.config.coordinatePrecision
+					this.config.coordinatePrecision,
 				);
 
 				// Ensure that coordinates do not exceed

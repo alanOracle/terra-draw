@@ -3,10 +3,15 @@ import {
 	TerraDrawAdapterStyling,
 	NumericStyling,
 	HexColorStyling,
+	Cursor,
 } from "../../common";
 import { GeoJSONStoreFeatures } from "../../store/store";
 import { getDefaultStyling } from "../../util/styling";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { isValidPoint } from "../../geometry/boolean/is-valid-point";
 
 type PointModeStyling = {
@@ -15,17 +20,38 @@ type PointModeStyling = {
 	pointOutlineColor: HexColorStyling;
 	pointOutlineWidth: NumericStyling;
 };
+
+interface Cursors {
+	create?: Cursor;
+}
+
+interface TerraDrawPointModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	cursors?: Cursors;
+}
+
 export class TerraDrawPointMode extends TerraDrawBaseDrawMode<PointModeStyling> {
 	mode = "point";
 
-	constructor(options?: { styles?: Partial<PointModeStyling> }) {
+	private cursors: Required<Cursors>;
+
+	constructor(options?: TerraDrawPointModeOptions<PointModeStyling>) {
 		super(options);
+		const defaultCursors = {
+			create: "crosshair",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
 	}
 
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.create);
 	}
 
 	/** @internal */
@@ -88,25 +114,25 @@ export class TerraDrawPointMode extends TerraDrawBaseDrawMode<PointModeStyling> 
 			styles.pointWidth = this.getNumericStylingValue(
 				this.styles.pointWidth,
 				styles.pointWidth,
-				feature
+				feature,
 			);
 
 			styles.pointColor = this.getHexColorStylingValue(
 				this.styles.pointColor,
 				styles.pointColor,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineColor = this.getHexColorStylingValue(
 				this.styles.pointOutlineColor,
 				styles.pointOutlineColor,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineWidth = this.getNumericStylingValue(
 				this.styles.pointOutlineWidth,
 				2,
-				feature
+				feature,
 			);
 		}
 

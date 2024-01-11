@@ -3,13 +3,13 @@ import { TerraDrawMapboxGLAdapter } from "./mapbox-gl.adapter";
 
 const createMapboxGLMap = () => {
 	return {
-		project: jest.fn(() => ({ x: 0, y: 0 } as any)),
-		unproject: jest.fn(() => ({ lng: 0, lat: 0 } as any)),
+		project: jest.fn(() => ({ x: 0, y: 0 }) as any),
+		unproject: jest.fn(() => ({ lng: 0, lat: 0 }) as any),
 		getCanvas: jest.fn(
 			() =>
 				({
 					style: { removeProperty: jest.fn(), cursor: "initial" },
-				} as any)
+				}) as any,
 		),
 		getContainer: jest.fn(
 			() =>
@@ -18,7 +18,7 @@ const createMapboxGLMap = () => {
 						left: 0,
 						top: 0,
 					} as DOMRect),
-				} as unknown as HTMLElement)
+				}) as unknown as HTMLElement,
 		),
 		doubleClickZoom: {
 			enable: jest.fn(),
@@ -52,7 +52,7 @@ describe("TerraDrawMapboxGLAdapter", () => {
 			});
 
 			expect(adapter).toBeDefined();
-			expect(adapter.getMapContainer).toBeDefined();
+			expect(adapter.getMapEventElement).toBeDefined();
 			expect(adapter.render).toBeDefined();
 			expect(adapter.register).toBeDefined();
 			expect(adapter.unregister).toBeDefined();
@@ -72,28 +72,13 @@ describe("TerraDrawMapboxGLAdapter", () => {
 		});
 		it("getLngLatFromEvent returns correct coordinates", () => {
 			// Mock the containerPointToLatLng function
-			map.unproject = jest.fn((point) => ({
+			map.unproject = jest.fn(() => ({
 				lat: 51.507222,
 				lng: -0.1275,
 			})) as unknown as (point: mapboxgl.PointLike) => mapboxgl.LngLat;
 
 			const result = adapter.getLngLatFromEvent(getMockPointerEvent());
 			expect(result).toEqual({ lat: 51.507222, lng: -0.1275 });
-		});
-	});
-
-	describe("getMapContainer", () => {
-		let adapter: TerraDrawMapboxGLAdapter;
-		const map = createMapboxGLMap();
-		beforeEach(() => {
-			adapter = new TerraDrawMapboxGLAdapter({
-				map: map as mapboxgl.Map,
-			});
-		});
-
-		it("returns the container", () => {
-			const container = adapter.getMapContainer();
-			expect(container.getBoundingClientRect).toBeDefined();
 		});
 	});
 

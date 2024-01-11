@@ -47,6 +47,12 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			});
 
 			this._rendered = false;
+
+			// TODO: This is necessary to prevent render artifacts, perhaps there is a nicer solution?
+			if (this._nextRender) {
+				cancelAnimationFrame(this._nextRender);
+				this._nextRender = undefined;
+			}
 		}
 	}
 
@@ -134,7 +140,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	private _addLayer(
 		id: string,
 		featureType: "Point" | "LineString" | "Polygon",
-		beneath?: string
+		beneath?: string,
 	) {
 		if (featureType === "Point") {
 			this._addPointLayer(id, beneath);
@@ -150,7 +156,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 
 	private _addGeoJSONLayer<T extends GeoJSONStoreGeometries>(
 		featureType: Feature<T>["geometry"]["type"],
-		features: Feature<T>[]
+		features: Feature<T>[],
 	) {
 		const id = `td-${featureType.toLowerCase()}`;
 		this._addGeoJSONSource(id, features);
@@ -161,7 +167,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 
 	private _setGeoJSONLayerData<T extends GeoJSONStoreGeometries>(
 		featureType: Feature<T>["geometry"]["type"],
-		features: Feature<T>[]
+		features: Feature<T>[],
 	) {
 		const id = `td-${featureType.toLowerCase()}`;
 		const source = this._map.getSource(id);
@@ -230,7 +236,7 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	 * @returns An object with 'lng' and 'lat' properties representing the longitude and latitude, or null if the conversion is not possible.
 	 */
 	public getLngLatFromEvent(event: PointerEvent | MouseEvent) {
-		const { left, top } = this.getMapContainer().getBoundingClientRect();
+		const { left, top } = this._container.getBoundingClientRect();
 		const x = event.clientX - left;
 		const y = event.clientY - top;
 
@@ -238,11 +244,11 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 	}
 
 	/**
-	 * Retrieves the HTML container element of the Leaflet map.
+	 *Retrieves the HTML element of the Mapbox element that handles interaction events
 	 * @returns The HTMLElement representing the map container.
 	 */
-	public getMapContainer() {
-		return this._container;
+	public getMapEventElement() {
+		return this._map.getCanvas();
 	}
 
 	/**
@@ -374,11 +380,11 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				this._addGeoJSONLayer<Point>("Point", points as Feature<Point>[]);
 				this._addGeoJSONLayer<LineString>(
 					"LineString",
-					linestrings as Feature<LineString>[]
+					linestrings as Feature<LineString>[],
 				);
 				this._addGeoJSONLayer<Polygon>(
 					"Polygon",
-					polygons as Feature<Polygon>[]
+					polygons as Feature<Polygon>[],
 				);
 				this._rendered = true;
 			} else {
@@ -397,21 +403,21 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				if (updatePoints) {
 					pointId = this._setGeoJSONLayerData<Point>(
 						"Point",
-						points as Feature<Point>[]
+						points as Feature<Point>[],
 					);
 				}
 
 				if (updateLineStrings) {
 					this._setGeoJSONLayerData<LineString>(
 						"LineString",
-						linestrings as Feature<LineString>[]
+						linestrings as Feature<LineString>[],
 					);
 				}
 
 				if (updatedPolygon) {
 					this._setGeoJSONLayerData<Polygon>(
 						"Polygon",
-						polygons as Feature<Polygon>[]
+						polygons as Feature<Polygon>[],
 					);
 				}
 

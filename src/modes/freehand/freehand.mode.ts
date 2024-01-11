@@ -2,13 +2,17 @@ import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
 	TerraDrawKeyboardEvent,
-	HexColor,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { Polygon } from "geojson";
 
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { getDefaultStyling } from "../../util/styling";
 import { GeoJSONStoreFeatures } from "../../store/store";
 import { pixelDistance } from "../../geometry/measure/pixel-distance";
@@ -30,6 +34,19 @@ type FreehandPolygonStyling = {
 	closingPointOutlineWidth: NumericStyling;
 };
 
+interface Cursors {
+	start?: Cursor;
+	close?: Cursor;
+}
+
+interface TerraDrawFreehandModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	minDistance?: number;
+	preventPointsNearClose?: boolean;
+	keyEvents?: TerraDrawFreehandModeKeyEvents | null;
+	cursors?: Cursors;
+}
+
 export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygonStyling> {
 	mode = "freehand";
 
@@ -38,13 +55,25 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 	private closingPointId: string | undefined;
 	private minDistance: number;
 	private keyEvents: TerraDrawFreehandModeKeyEvents;
+	private cursors: Required<Cursors>;
+	private preventPointsNearClose: boolean;
 
-	constructor(options?: {
-		styles?: Partial<FreehandPolygonStyling>;
-		minDistance?: number;
-		keyEvents?: TerraDrawFreehandModeKeyEvents | null;
-	}) {
+	constructor(options?: TerraDrawFreehandModeOptions<FreehandPolygonStyling>) {
 		super(options);
+
+		const defaultCursors = {
+			start: "crosshair",
+			close: "pointer",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
+
+		this.preventPointsNearClose =
+			(options && options.preventPointsNearClose) || true;
 
 		this.minDistance = (options && options.minDistance) || 20;
 
@@ -84,7 +113,7 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 	}
 
 	/** @internal */
@@ -102,7 +131,7 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 		}
 
 		const currentLineGeometry = this.store.getGeometryCopy<Polygon>(
-			this.currentId
+			this.currentId,
 		);
 
 		const [previousLng, previousLat] =
@@ -112,20 +141,26 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 		const { x, y } = this.project(previousLng, previousLat);
 		const distance = pixelDistance(
 			{ x, y },
-			{ x: event.containerX, y: event.containerY }
+			{ x: event.containerX, y: event.containerY },
 		);
 
 		const [closingLng, closingLat] = currentLineGeometry.coordinates[0][0];
 		const { x: closingX, y: closingY } = this.project(closingLng, closingLat);
 		const closingDistance = pixelDistance(
 			{ x: closingX, y: closingY },
-			{ x: event.containerX, y: event.containerY }
+			{ x: event.containerX, y: event.containerY },
 		);
 
 		if (closingDistance < this.pointerDistance) {
-			this.setCursor("pointer");
+			this.setCursor(this.cursors.close);
+
+			// We want to prohibit drawing new points at or around the closing
+			// point as it can be non user friendly
+			if (this.preventPointsNearClose) {
+				return;
+			}
 		} else {
-			this.setCursor("crosshair");
+			this.setCursor(this.cursors.start);
 		}
 
 		// The cusor must have moved a minimum distance
@@ -242,25 +277,25 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 			styles.polygonFillColor = this.getHexColorStylingValue(
 				this.styles.fillColor,
 				styles.polygonFillColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineColor = this.getHexColorStylingValue(
 				this.styles.outlineColor,
 				styles.polygonOutlineColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineWidth = this.getNumericStylingValue(
 				this.styles.outlineWidth,
 				styles.polygonOutlineWidth,
-				feature
+				feature,
 			);
 
 			styles.polygonFillOpacity = this.getNumericStylingValue(
 				this.styles.fillOpacity,
 				styles.polygonFillOpacity,
-				feature
+				feature,
 			);
 
 			return styles;
@@ -272,25 +307,25 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 			styles.pointWidth = this.getNumericStylingValue(
 				this.styles.closingPointWidth,
 				styles.pointWidth,
-				feature
+				feature,
 			);
 
 			styles.pointColor = this.getHexColorStylingValue(
 				this.styles.closingPointColor,
 				styles.pointColor,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineColor = this.getHexColorStylingValue(
 				this.styles.closingPointOutlineColor,
 				styles.pointOutlineColor,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineWidth = this.getNumericStylingValue(
 				this.styles.closingPointOutlineWidth,
 				2,
-				feature
+				feature,
 			);
 
 			return styles;

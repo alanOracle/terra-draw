@@ -1,12 +1,10 @@
 import {
-	TerraDrawAdapterStyling,
 	TerraDrawChanges,
 	SetCursor,
 	TerraDrawStylingFunction,
+	TerraDrawCallbacks,
 } from "../common";
 import { GeoJsonObject } from "geojson";
-
-import { GeoJSONStoreFeatures } from "../store/store";
 import { TerraDrawBaseAdapter } from "./common/base.adapter";
 
 export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
@@ -32,8 +30,13 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 	private _cursorStyleSheet: HTMLStyleElement | undefined;
 	private _lib: typeof google.maps;
 	private _map: google.maps.Map;
-	private _layers = false;
 	private _overlay: google.maps.OverlayView;
+	private _clickEventListener: google.maps.MapsEventListener | undefined;
+	private _mouseMoveEventListener: google.maps.MapsEventListener | undefined;
+
+	private get _layers(): boolean {
+		return Boolean(this.renderedFeatureIds?.size > 0);
+	}
 
 	/**
 	 * Generates an SVG path string for a circle with the given center coordinates and radius.
@@ -46,6 +49,51 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 	private circlePath(cx: number, cy: number, r: number) {
 		const d = r * 2;
 		return `M ${cx} ${cy} m -${r}, 0 a ${r},${r} 0 1,0 ${d},0 a ${r},${r} 0 1,0 -${d},0`;
+	}
+
+	public register(callbacks: TerraDrawCallbacks) {
+		super.register(callbacks);
+
+		// Clicking on data geometries triggers
+		// swallows the map onclick event,
+		// so we need to forward it to the click callback handler
+		this._clickEventListener = this._map.data.addListener(
+			"click",
+			(
+				event: google.maps.MapMouseEvent & {
+					domEvent: MouseEvent;
+				},
+			) => {
+				const clickListener = this._listeners.find(
+					({ name }) => name === "click",
+				);
+				if (clickListener) {
+					clickListener.callback(event);
+				}
+			},
+		);
+
+		this._mouseMoveEventListener = this._map.data.addListener(
+			"mousemove",
+			(
+				event: google.maps.MapMouseEvent & {
+					domEvent: MouseEvent;
+				},
+			) => {
+				const mouseMoveListener = this._listeners.find(
+					({ name }) => name === "mousemove",
+				);
+				if (mouseMoveListener) {
+					mouseMoveListener.callback(event);
+				}
+			},
+		);
+	}
+
+	public unregister(): void {
+		super.unregister();
+		this._clickEventListener?.remove();
+		this._mouseMoveEventListener?.remove();
 	}
 
 	/**
@@ -62,12 +110,12 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 
 		const ne = bounds.getNorthEast();
 		const sw = bounds.getSouthWest();
-		const latLngBounds = new google.maps.LatLngBounds(sw, ne);
+		const latLngBounds = new this._lib.LatLngBounds(sw, ne);
 
 		const mapCanvas = this._map.getDiv();
 		const offsetX = event.clientX - mapCanvas.getBoundingClientRect().left;
 		const offsetY = event.clientY - mapCanvas.getBoundingClientRect().top;
-		const screenCoord = new google.maps.Point(offsetX, offsetY);
+		const screenCoord = new this._lib.Point(offsetX, offsetY);
 
 		const projection = this._overlay.getProjection();
 
@@ -85,11 +133,13 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 	}
 
 	/**
-	 * Retrieves the HTML container element of the Leaflet map.
+	 * Retrieves the HTML element of the Google Map element that handles interaction events
 	 * @returns The HTMLElement representing the map container.
 	 */
-	getMapContainer() {
-		return this._map.getDiv();
+	public getMapEventElement() {
+		// TODO: This is a bit hacky, maybe there is a better solution here
+		const selector = 'div[style*="z-index: 3;"]';
+		return this._map.getDiv().querySelector(selector) as HTMLDivElement;
 	}
 
 	/**
@@ -105,36 +155,20 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 			throw new Error("cannot get bounds");
 		}
 
-		const northWest = new this._lib.LatLng(
-			bounds.getNorthEast().lat(),
-			bounds.getSouthWest().lng()
-		);
-
-		const projection = this._map.getProjection();
+		const projection = this._overlay.getProjection();
 		if (projection === undefined) {
 			throw new Error("cannot get projection");
 		}
 
-		const projectedNorthWest = projection.fromLatLngToPoint(northWest);
-		if (projectedNorthWest === null) {
-			throw new Error("cannot get projectedNorthWest");
+		const point = projection.fromLatLngToContainerPixel(
+			new this._lib.LatLng(lat, lng),
+		);
+
+		if (point === null) {
+			throw new Error("cannot project coordinates");
 		}
 
-		const projected = projection.fromLatLngToPoint({ lng, lat });
-		if (projected === null) {
-			throw new Error("cannot get projected lng lat");
-		}
-
-		const zoom = this._map.getZoom();
-		if (zoom === undefined) {
-			throw new Error("cannot get zoom");
-		}
-
-		const scale = Math.pow(2, zoom);
-		return {
-			x: Math.floor((projected.x - projectedNorthWest.x) * scale),
-			y: Math.floor((projected.y - projectedNorthWest.y) * scale),
-		};
+		return { x: point.x, y: point.y };
 	}
 
 	/**
@@ -144,44 +178,20 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 	 * @returns An object with 'lng' and 'lat' properties representing the longitude and latitude coordinates.
 	 */
 	unproject(x: number, y: number) {
-		const projection = this._map.getProjection();
+		const projection = this._overlay.getProjection();
 		if (projection === undefined) {
 			throw new Error("cannot get projection");
 		}
 
-		const bounds = this._map.getBounds();
-		if (bounds === undefined) {
-			throw new Error("cannot get bounds");
-		}
-
-		const topRight = projection.fromLatLngToPoint(bounds.getNorthEast());
-		if (topRight === null) {
-			throw new Error("cannot get topRight");
-		}
-
-		const bottomLeft = projection.fromLatLngToPoint(bounds.getSouthWest());
-		if (bottomLeft === null) {
-			throw new Error("cannot get bottomLeft");
-		}
-
-		const zoom = this._map.getZoom();
-		if (zoom === undefined) {
-			throw new Error("zoom get bounds");
-		}
-
-		const scale = Math.pow(2, zoom);
-
-		const worldPoint = new google.maps.Point(
-			x / scale + bottomLeft.x,
-			y / scale + topRight.y
+		const latLng = projection.fromContainerPixelToLatLng(
+			new this._lib.Point(x, y),
 		);
-		const lngLat = projection.fromPointToLatLng(worldPoint);
 
-		if (lngLat === null) {
-			throw new Error("zoom get bounds");
+		if (latLng === null) {
+			throw new Error("cannot unproject coordinates");
 		}
 
-		return { lng: lngLat.lng(), lat: lngLat.lat() };
+		return { lng: latLng.lng(), lat: latLng.lat() };
 	}
 
 	/**
@@ -201,13 +211,18 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 		if (cursor !== "unset") {
 			// TODO: We could cache these individually per cursor
 
-			const div = this.getMapContainer();
-			const style = document.createElement("style");
-			style.type = "text/css";
-			const selector = `#${div.id} [aria-label="Map"]`;
-			style.innerHTML = `${selector} { cursor: ${cursor} !important; }`;
-			document.getElementsByTagName("head")[0].appendChild(style);
-			this._cursorStyleSheet = style;
+			const div = this._map.getDiv();
+			const styleDivSelector = `#${div.id} div[aria-label] .gm-style > div`;
+			const styleDiv = document.querySelector(styleDivSelector);
+
+			if (styleDiv) {
+				styleDiv.classList.add("terra-draw-google-maps");
+
+				const style = document.createElement("style");
+				style.innerHTML = `.terra-draw-google-maps { cursor: ${cursor} !important; }`;
+				document.getElementsByTagName("head")[0].appendChild(style);
+				this._cursorStyleSheet = style;
+			}
 		}
 
 		this._cursor = cursor;
@@ -233,7 +248,7 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 		this._map.setOptions({ draggable: enabled });
 	}
 
-	private renderedFeatures: Set<string> = new Set();
+	private renderedFeatureIds: Set<string> = new Set();
 
 	/**
 	 * Renders GeoJSON features on the map using the provided styling configuration.
@@ -246,7 +261,7 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 				const featureToDelete = this._map.data.getFeatureById(deletedId);
 				if (featureToDelete) {
 					this._map.data.remove(featureToDelete);
-					this.renderedFeatures.delete(deletedId);
+					this.renderedFeatureIds.delete(deletedId);
 				}
 			});
 
@@ -256,7 +271,7 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 				}
 
 				const featureToUpdate = this._map.data.getFeatureById(
-					updatedFeature.id
+					updatedFeature.id,
 				);
 
 				if (!featureToUpdate) {
@@ -272,7 +287,7 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 				Object.keys(updatedFeature.properties).forEach((property) => {
 					featureToUpdate.setProperty(
 						property,
-						updatedFeature.properties[property]
+						updatedFeature.properties[property],
 					);
 				});
 
@@ -282,9 +297,9 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 							const coordinates = updatedFeature.geometry.coordinates;
 
 							featureToUpdate.setGeometry(
-								new google.maps.Data.Point(
-									new google.maps.LatLng(coordinates[1], coordinates[0])
-								)
+								new this._lib.Data.Point(
+									new this._lib.LatLng(coordinates[1], coordinates[0]),
+								),
 							);
 						}
 						break;
@@ -295,16 +310,14 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 							const path = [];
 							for (let i = 0; i < coordinates.length; i++) {
 								const coordinate = coordinates[i];
-								const latLng = new google.maps.LatLng(
+								const latLng = new this._lib.LatLng(
 									coordinate[1],
-									coordinate[0]
+									coordinate[0],
 								);
 								path.push(latLng);
 							}
 
-							featureToUpdate.setGeometry(
-								new google.maps.Data.LineString(path)
-							);
+							featureToUpdate.setGeometry(new this._lib.Data.LineString(path));
 						}
 						break;
 					case "Polygon":
@@ -315,16 +328,16 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 							for (let i = 0; i < coordinates.length; i++) {
 								const path = [];
 								for (let j = 0; j < coordinates[i].length; j++) {
-									const latLng = new google.maps.LatLng(
+									const latLng = new this._lib.LatLng(
 										coordinates[i][j][1],
-										coordinates[i][j][0]
+										coordinates[i][j][0],
 									);
 									path.push(latLng);
 								}
 								paths.push(path);
 							}
 
-							featureToUpdate.setGeometry(new google.maps.Data.Polygon(paths));
+							featureToUpdate.setGeometry(new this._lib.Data.Polygon(paths));
 						}
 
 						break;
@@ -333,48 +346,13 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 
 			// Create new features
 			changes.created.forEach((createdFeature) => {
-				this.renderedFeatures.add(createdFeature.id as string);
+				this.renderedFeatureIds.add(createdFeature.id as string);
 				this._map.data.addGeoJson(createdFeature);
 			});
-		} else {
-			// Clicking on data geometries triggers
-			// swallows the map onclick event,
-			// so we need to forward it to the click callback handler
-			this._map.data.addListener(
-				"click",
-				(
-					event: google.maps.MapMouseEvent & {
-						domEvent: MouseEvent;
-					}
-				) => {
-					const clickListener = this._listeners.find(
-						({ name }) => name === "click"
-					);
-					if (clickListener) {
-						clickListener.callback(event);
-					}
-				}
-			);
-
-			this._map.data.addListener(
-				"mousemove",
-				(
-					event: google.maps.MapMouseEvent & {
-						domEvent: MouseEvent;
-					}
-				) => {
-					const mouseMoveListener = this._listeners.find(
-						({ name }) => name === "mousemove"
-					);
-					if (mouseMoveListener) {
-						mouseMoveListener.callback(event);
-					}
-				}
-			);
 		}
 
 		changes.created.forEach((feature) => {
-			this.renderedFeatures.add(feature.id as string);
+			this.renderedFeatureIds.add(feature.id as string);
 		});
 
 		const featureCollection = {
@@ -439,21 +417,18 @@ export class TerraDrawGoogleMapsAdapter extends TerraDrawBaseAdapter {
 
 			throw Error("Unknown feature type");
 		});
-
-		this._layers = true;
 	}
 
 	private clearLayers() {
 		if (this._layers) {
 			this._map.data.forEach((feature) => {
 				const id = feature.getId() as string;
-				const hasFeature = this.renderedFeatures.has(id);
+				const hasFeature = this.renderedFeatureIds.has(id);
 				if (hasFeature) {
 					this._map.data.remove(feature);
 				}
 			});
-			this.renderedFeatures = new Set();
-			this._layers = false;
+			this.renderedFeatureIds = new Set();
 		}
 	}
 

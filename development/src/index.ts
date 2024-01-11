@@ -17,6 +17,7 @@ import {
 	TerraDrawGoogleMapsAdapter,
 	TerraDrawMapLibreGLAdapter,
 	TerraDrawGreatCircleMode,
+	TerraDrawArcGISMapsSDKAdapter,
 } from "../../src/terra-draw";
 import { TerraDrawRenderMode } from "../../src/modes/render/render.mode";
 
@@ -30,10 +31,21 @@ import { Circle as CircleStyle, Fill, Stroke, Style } from "ol/style";
 import { OSM, Vector as VectorSource } from "ol/source";
 import { Tile as TileLayer, Vector as VectorLayer } from "ol/layer";
 import { fromLonLat, toLonLat } from "ol/proj";
+import EsriMap from "@arcgis/core/Map";
+import MapView from "@arcgis/core/views/MapView.js";
+import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
+import Point from "@arcgis/core/geometry/Point";
+import Polyline from "@arcgis/core/geometry/Polyline";
+import Polygon from "@arcgis/core/geometry/Polygon";
+import Graphic from "@arcgis/core/Graphic";
+import SimpleFillSymbol from "@arcgis/core/symbols/SimpleFillSymbol";
+import SimpleLineSymbol from "@arcgis/core/symbols/SimpleLineSymbol";
+import Color from "@arcgis/core/Color";
+import SimpleMarkerSymbol from "@arcgis/core/symbols/SimpleMarkerSymbol";
 
 const addModeChangeHandler = (
 	draw: TerraDraw,
-	currentSelected: { button: undefined | HTMLButtonElement; mode: string }
+	currentSelected: { button: undefined | HTMLButtonElement; mode: string },
 ) => {
 	[
 		"select",
@@ -55,10 +67,10 @@ const addModeChangeHandler = (
 					currentSelected.button.style.color = "565656";
 				}
 				currentSelected.button = document.getElementById(
-					mode
+					mode,
 				) as HTMLButtonElement;
 				currentSelected.button.style.color = "#27ccff";
-			}
+			},
 		);
 	});
 
@@ -66,13 +78,13 @@ const addModeChangeHandler = (
 		"click",
 		() => {
 			draw.clear();
-		}
+		},
 	);
 };
 
 const getModes = () => {
-	return {
-		select: new TerraDrawSelectMode({
+	return [
+		new TerraDrawSelectMode({
 			flags: {
 				arbitary: {
 					feature: {},
@@ -114,32 +126,54 @@ const getModes = () => {
 				},
 			},
 		}),
-		point: new TerraDrawPointMode(),
-		linestring: new TerraDrawLineStringMode({
+		new TerraDrawPointMode(),
+		new TerraDrawLineStringMode({
 			snapping: true,
 			allowSelfIntersections: false,
 		}),
-		greatcircle: new TerraDrawGreatCircleMode({ snapping: true }),
-		polygon: new TerraDrawPolygonMode({
+		new TerraDrawGreatCircleMode({ snapping: true }),
+		new TerraDrawPolygonMode({
 			snapping: true,
 			allowSelfIntersections: false,
 		}),
-		rectangle: new TerraDrawRectangleMode(),
-		circle: new TerraDrawCircleMode(),
-		freehand: new TerraDrawFreehandMode(),
-		arbitary: new TerraDrawRenderMode({
+		new TerraDrawRectangleMode(),
+		new TerraDrawCircleMode(),
+		new TerraDrawFreehandMode(),
+		new TerraDrawRenderMode({
+			modeName: "arbitary",
 			styles: {
 				polygonFillColor: "#4357AD",
 				polygonOutlineColor: "#48A9A6",
 				polygonOutlineWidth: 2,
 			},
 		}),
-	};
+	];
 };
 
 let currentSelected: { button: undefined | HTMLButtonElement; mode: string } = {
 	button: undefined,
 	mode: "static",
+};
+
+// Used by both Mapbox and MapLibre
+let OSMStyle: Object = {
+	version: 8,
+	sources: {
+		"osm-tiles": {
+			type: "raster",
+			tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+			tileSize: 256,
+			attribution:
+				'&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+		},
+	},
+	layers: [
+		{
+			id: "osm-tiles",
+			type: "raster",
+			source: "osm-tiles",
+		},
+	],
 };
 
 const example = {
@@ -186,20 +220,28 @@ const example = {
 			return;
 		}
 
-		if (!accessToken) {
-			return;
-		}
-
 		const { lng, lat, zoom } = this;
-
-		mapboxgl.accessToken = accessToken;
 
 		const map = new mapboxgl.Map({
 			container: id, // container ID
-			style: "mapbox://styles/mapbox/streets-v11", // style URL
 			center: [lng, lat], // starting position [lng, lat]
 			zoom: zoom, // starting zoom
 		});
+
+		// If we have an access token
+		if (accessToken) {
+			// Use it
+			mapboxgl.accessToken = accessToken;
+
+			// Use the Mapbox Streets style
+			map.setStyle("mapbox://styles/mapbox/streets-v11");
+		} else {
+			// Use invalid access token
+			mapboxgl.accessToken = "123";
+
+			// Use the OpenStreetMap style
+			map.setStyle(OSMStyle as mapboxgl.Style);
+		}
 
 		map.on("style.load", () => {
 			const draw = new TerraDraw({
@@ -216,24 +258,18 @@ const example = {
 		});
 		this.initialised.push("mapbox");
 	},
-	initMapLibre(id: string, accessToken: string | undefined) {
+	initMapLibre(id: string) {
 		if (this.initialised.includes("maplibre")) {
-			return;
-		}
-
-		if (!accessToken) {
 			return;
 		}
 
 		const { lng, lat, zoom } = this;
 
-		mapboxgl.accessToken = accessToken;
-
 		const map = new maplibregl.Map({
-			container: id, // container ID
-			style: "https://demotiles.maplibre.org/style.json", // style URL
-			center: [lng, lat], // starting position [lng, lat]
-			zoom: zoom, // starting zoom
+			container: id,
+			style: OSMStyle as maplibregl.StyleSpecification,
+			center: [lng, lat],
+			zoom: zoom,
 		});
 
 		map.on("style.load", () => {
@@ -270,42 +306,46 @@ const example = {
 			target: id,
 			view: new View({
 				center,
-				zoom,
+				zoom: zoom + 1, // adjusted to match raster maps
 			}),
 			controls: [],
 		});
 
-		const draw = new TerraDraw({
-			adapter: new TerraDrawOpenLayersAdapter({
-				lib: {
-					Circle,
-					Feature,
-					GeoJSON,
-					Style,
-					VectorLayer,
-					VectorSource,
-					Stroke,
-					toLonLat,
-					CircleStyle,
-				},
-				map,
-				coordinatePrecision: 9,
-			}),
-			modes: getModes(),
+		map.once("postrender", () => {
+			const draw = new TerraDraw({
+				adapter: new TerraDrawOpenLayersAdapter({
+					lib: {
+						Circle,
+						Feature,
+						GeoJSON,
+						Style,
+						VectorLayer,
+						VectorSource,
+						Stroke,
+						toLonLat,
+						CircleStyle,
+					},
+					map,
+					coordinatePrecision: 9,
+				}),
+				modes: getModes(),
+			});
+			draw.start();
+
+			addModeChangeHandler(draw, currentSelected);
+
+			this.initialised.push("openlayers");
 		});
-		draw.start();
-
-		addModeChangeHandler(draw, currentSelected);
-
-		this.initialised.push("openlayers");
 	},
 	initGoogleMaps(id: string, apiKey: string | undefined) {
 		if (this.initialised.includes("google")) {
 			return;
 		}
 
+		// If no API key is provided
 		if (!apiKey) {
-			return;
+			// Using an empty key will still work for development
+			apiKey = "";
 		}
 
 		const loader = new Loader({
@@ -319,9 +359,10 @@ const example = {
 				{
 					disableDefaultUI: true,
 					center: { lat: this.lat, lng: this.lng },
-					zoom: this.zoom,
+					zoom: this.zoom + 1, // adjusted to match raster maps
 					clickableIcons: false,
-				}
+					mapId: process.env.GOOGLE_MAP_ID,
+				},
 			);
 
 			map.addListener("projection_changed", () => {
@@ -341,6 +382,46 @@ const example = {
 			});
 		});
 	},
+	initArcGISMapsSDK(id: string) {
+		if (this.initialised.includes("arcGISMapsSDK")) {
+			return;
+		}
+
+		const { lng, lat, zoom } = this;
+		const map = new EsriMap({
+			basemap: "osm", // Basemap layer service
+		});
+
+		const view = new MapView({
+			map: map,
+			center: [lng, lat], // Longitude, latitude
+			zoom: zoom + 1, // Zoom level
+			container: id, // Div element
+		});
+
+		const draw = new TerraDraw({
+			adapter: new TerraDrawArcGISMapsSDKAdapter({
+				lib: {
+					GraphicsLayer,
+					Point,
+					Polyline,
+					Polygon,
+					Graphic,
+					SimpleLineSymbol,
+					SimpleFillSymbol,
+					SimpleMarkerSymbol,
+					Color,
+				},
+				map: view,
+			}),
+			modes: getModes(),
+		});
+
+		draw.start();
+		addModeChangeHandler(draw, currentSelected);
+
+		this.initialised.push("arcGISMapsSDK");
+	},
 };
 
 console.log(process.env);
@@ -349,7 +430,8 @@ example.initOpenLayers("openlayers-map");
 example.initLeaflet("leaflet-map");
 example.initMapbox("mapbox-map", process.env.MAPBOX_ACCESS_TOKEN);
 example.initGoogleMaps("google-map", process.env.GOOGLE_API_KEY);
-example.initMapLibre("maplibre-map", process.env.MAPBOX_ACCESS_TOKEN);
+example.initMapLibre("maplibre-map");
+example.initArcGISMapsSDK("arcgis-maps-sdk");
 document.addEventListener("keyup", (event) => {
 	(document.getElementById("keybind") as HTMLButtonElement).innerHTML =
 		event.key;

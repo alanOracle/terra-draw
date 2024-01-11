@@ -10,6 +10,7 @@ import { PixelDistanceBehavior } from "../../pixel-distance.behavior";
 import { DragCoordinateBehavior } from "./drag-coordinate.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
 import { SelectionPointBehavior } from "./selection-point.behavior";
+import { TerraDrawMouseEvent } from "../../../common";
 
 describe("DragCoordinateBehavior", () => {
 	const createLineString = (
@@ -17,7 +18,7 @@ describe("DragCoordinateBehavior", () => {
 		coordinates: Position[] = [
 			[0, 0],
 			[0, 1],
-		]
+		],
 	) => {
 		const [createdId] = config.store.create([
 			{
@@ -42,7 +43,7 @@ describe("DragCoordinateBehavior", () => {
 				config,
 				new PixelDistanceBehavior(config),
 				selectionPointBehavior,
-				new MidPointBehavior(config, selectionPointBehavior)
+				new MidPointBehavior(config, selectionPointBehavior),
 			);
 		});
 	});
@@ -57,14 +58,14 @@ describe("DragCoordinateBehavior", () => {
 			const pixelDistanceBehavior = new PixelDistanceBehavior(config);
 			const midpointBehavior = new MidPointBehavior(
 				config,
-				selectionPointBehavior
+				selectionPointBehavior,
 			);
 
 			dragCoordinateBehavior = new DragCoordinateBehavior(
 				config,
 				pixelDistanceBehavior,
 				selectionPointBehavior,
-				midpointBehavior
+				midpointBehavior,
 			);
 		});
 
@@ -75,7 +76,7 @@ describe("DragCoordinateBehavior", () => {
 
 				const index = dragCoordinateBehavior.getDraggableIndex(
 					mockDrawEvent(),
-					id
+					id,
 				);
 				expect(index).toBe(-1);
 			});
@@ -93,7 +94,7 @@ describe("DragCoordinateBehavior", () => {
 
 				const index = dragCoordinateBehavior.getDraggableIndex(
 					mockDrawEvent(),
-					id
+					id,
 				);
 				expect(index).toBe(-1);
 			});
@@ -111,7 +112,7 @@ describe("DragCoordinateBehavior", () => {
 
 				const index = dragCoordinateBehavior.getDraggableIndex(
 					mockDrawEvent(),
-					id
+					id,
 				);
 				expect(index).toBe(0);
 			});
@@ -126,7 +127,7 @@ describe("DragCoordinateBehavior", () => {
 
 				const index = dragCoordinateBehavior.getDraggableIndex(
 					mockDrawEvent(),
-					id
+					id,
 				);
 				expect(index).toBe(0);
 			});
@@ -136,16 +137,16 @@ describe("DragCoordinateBehavior", () => {
 			it("returns early if nothing is being dragged", () => {
 				jest.spyOn(config.store, "updateGeometry");
 
-				dragCoordinateBehavior.drag(mockDrawEvent());
+				dragCoordinateBehavior.drag(mockDrawEvent(), true);
 
 				expect(config.store.updateGeometry).toBeCalledTimes(0);
 			});
 
 			it("returns early if geometry is a point", () => {
-				const id = createStorePoint(config);
+				createStorePoint(config);
 				jest.spyOn(config.store, "updateGeometry");
 
-				dragCoordinateBehavior.drag(mockDrawEvent());
+				dragCoordinateBehavior.drag(mockDrawEvent(), true);
 
 				expect(config.store.updateGeometry).toBeCalledTimes(0);
 			});
@@ -164,7 +165,7 @@ describe("DragCoordinateBehavior", () => {
 					.mockReturnValueOnce({ x: 1, y: 0 })
 					.mockReturnValueOnce({ x: 0, y: 0 });
 
-				dragCoordinateBehavior.drag(mockDrawEvent());
+				dragCoordinateBehavior.drag(mockDrawEvent(), true);
 
 				expect(config.store.updateGeometry).toBeCalledTimes(1);
 			});
@@ -179,9 +180,65 @@ describe("DragCoordinateBehavior", () => {
 					.mockReturnValueOnce({ x: 0, y: 0 })
 					.mockReturnValueOnce({ x: 0, y: 1 });
 
-				dragCoordinateBehavior.drag(mockDrawEvent());
+				dragCoordinateBehavior.drag(mockDrawEvent(), true);
 
 				expect(config.store.updateGeometry).toBeCalledTimes(1);
+			});
+
+			it("does not update Polygon coordinate of self-intersecting Polygon if self-intersections are disabled", () => {
+				const id = createStorePolygon(config, [
+					[
+						[0, 1],
+						[50, 2],
+						[100, 2],
+						[150, 1],
+						[0, 1],
+					],
+				] as Position[][]);
+
+				dragCoordinateBehavior.startDragging(id, 2);
+
+				jest.spyOn(config.store, "updateGeometry");
+
+				(config.project as jest.Mock)
+					.mockReturnValueOnce({ x: 0, y: 1 })
+					.mockReturnValueOnce({ x: 50, y: 2 })
+					.mockReturnValueOnce({ x: 100, y: 2 })
+					.mockReturnValueOnce({ x: 150, y: 1 })
+					.mockReturnValueOnce({ x: 0, y: 1 });
+
+				const mde = mockDrawEvent({
+					lng: 100,
+					lat: 0,
+				} as Partial<TerraDrawMouseEvent>);
+				dragCoordinateBehavior.drag(mde, false);
+				expect(config.store.updateGeometry).toBeCalledTimes(0);
+			});
+
+			it("does not update LineString coordinate of self-intersecting LineString if self-intersections are disabled", () => {
+				const id = createLineString(config, [
+					[0, 1],
+					[50, 2],
+					[100, 2],
+					[150, 1],
+					[0, 1],
+				] as Position[]);
+				jest.spyOn(config.store, "updateGeometry");
+
+				dragCoordinateBehavior.startDragging(id, 2);
+
+				(config.project as jest.Mock)
+					.mockReturnValueOnce({ x: 0, y: 1 })
+					.mockReturnValueOnce({ x: 50, y: 2 })
+					.mockReturnValueOnce({ x: 100, y: 2 })
+					.mockReturnValueOnce({ x: 150, y: 1 })
+					.mockReturnValueOnce({ x: 0, y: 1 });
+				const mde = mockDrawEvent({
+					lng: 100,
+					lat: 0,
+				} as Partial<TerraDrawMouseEvent>);
+				dragCoordinateBehavior.drag(mde, false);
+				expect(config.store.updateGeometry).toBeCalledTimes(0);
 			});
 		});
 	});

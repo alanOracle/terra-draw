@@ -1,17 +1,18 @@
 import { TerraDrawMouseEvent } from "../../../common";
 import { BehaviorConfig, TerraDrawModeBehavior } from "../../base.behavior";
 
-import { LineString, Polygon, Position, Point } from "geojson";
+import { LineString, Polygon, Position, Point, Feature } from "geojson";
 import { PixelDistanceBehavior } from "../../pixel-distance.behavior";
 import { MidPointBehavior } from "./midpoint.behavior";
 import { SelectionPointBehavior } from "./selection-point.behavior";
+import { selfIntersects } from "../../../geometry/boolean/self-intersects";
 
 export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 	constructor(
 		readonly config: BehaviorConfig,
 		private readonly pixelDistance: PixelDistanceBehavior,
 		private readonly selectionPoints: SelectionPointBehavior,
-		private readonly midPoints: MidPointBehavior
+		private readonly midPoints: MidPointBehavior,
 	) {
 		super(config);
 	}
@@ -23,7 +24,7 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 
 	private getClosestCoordinate(
 		event: TerraDrawMouseEvent,
-		geometry: Polygon | LineString | Point
+		geometry: Polygon | LineString | Point,
 	) {
 		const closestCoordinate = {
 			dist: Infinity,
@@ -71,7 +72,7 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 
 	public getDraggableIndex(
 		event: TerraDrawMouseEvent,
-		selectedId: string
+		selectedId: string,
 	): number {
 		const geometry = this.store.getGeometryCopy(selectedId);
 		const closestCoordinate = this.getClosestCoordinate(event, geometry);
@@ -83,7 +84,10 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 		return closestCoordinate.index;
 	}
 
-	public drag(event: TerraDrawMouseEvent): boolean {
+	public drag(
+		event: TerraDrawMouseEvent,
+		allowSelfIntersection: boolean,
+	): boolean {
 		if (!this.draggedCoordinate.id) {
 			return false;
 		}
@@ -123,6 +127,18 @@ export class DragCoordinateBehavior extends TerraDrawModeBehavior {
 			geomCoordinates[lastCoordIndex] = updatedCoordinate;
 		} else {
 			geomCoordinates[index] = updatedCoordinate;
+		}
+
+		if (
+			geometry.type !== "Point" &&
+			!allowSelfIntersection &&
+			selfIntersects({
+				type: "Feature",
+				geometry: geometry,
+				properties: {},
+			} as Feature<Polygon>)
+		) {
+			return false;
 		}
 
 		// Apply all the updates

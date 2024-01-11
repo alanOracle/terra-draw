@@ -3,6 +3,7 @@ import { TerraDrawLeafletAdapter } from "./adapters/leaflet.adapter";
 import { TerraDrawMapboxGLAdapter } from "./adapters/mapbox-gl.adapter";
 import { TerraDrawMapLibreGLAdapter } from "./adapters/maplibre-gl.adapter";
 import { TerraDrawOpenLayersAdapter } from "./adapters/openlayers.adapter";
+import { TerraDrawArcGISMapsSDKAdapter } from "./adapters/arcgis-maps-sdk.adapter";
 import {
 	TerraDrawAdapter,
 	TerraDrawAdapterStyling,
@@ -30,11 +31,17 @@ import { TerraDrawRenderMode } from "./modes/render/render.mode";
 import { TerraDrawSelectMode } from "./modes/select/select.mode";
 import { TerraDrawStaticMode } from "./modes/static/static.mode";
 import {
+	BBoxPolygon,
 	GeoJSONStore,
 	GeoJSONStoreFeatures,
 	StoreChangeHandler,
 } from "./store/store";
 import { BehaviorConfig } from "./modes/base.behavior";
+import { pixelDistance } from "./geometry/measure/pixel-distance";
+import { pixelDistanceToLine } from "./geometry/measure/pixel-distance-to-line";
+import { Position } from "geojson";
+import { pointInPolygon } from "./geometry/boolean/point-in-polygon";
+import { createBBoxFromPoint } from "./geometry/shape/create-bbox";
 
 type FinishListener = (ids: string) => void;
 type ChangeListener = (ids: string[], type: string) => void;
@@ -68,12 +75,29 @@ class TerraDraw {
 
 	constructor(options: {
 		adapter: TerraDrawAdapter;
-		modes: { [mode: string]: TerraDrawBaseDrawMode<any> };
+		modes: TerraDrawBaseDrawMode<any>[];
 	}) {
 		this._adapter = options.adapter;
+
 		this._mode = new TerraDrawStaticMode();
 
-		const modeKeys = Object.keys(options.modes);
+		// Keep track of if there are duplicate modes
+		const duplicateModeTracker = new Set();
+
+		// Construct a map of the mode name to the mode
+		const modesMap = options.modes.reduce<{
+			[mode: string]: TerraDrawBaseDrawMode<any>;
+		}>((modeMap, currentMode) => {
+			if (duplicateModeTracker.has(currentMode.mode)) {
+				throw new Error(`There is already a ${currentMode.mode} mode provided`);
+			}
+			duplicateModeTracker.add(currentMode.mode);
+			modeMap[currentMode.mode] = currentMode;
+			return modeMap;
+		}, {});
+
+		// Construct an array of the mode keys (names)
+		const modeKeys = Object.keys(modesMap);
 
 		// Ensure at least one draw mode is provided
 		if (modeKeys.length === 0) {
@@ -82,7 +106,7 @@ class TerraDraw {
 
 		// Ensure only one select mode can be present
 		modeKeys.forEach((mode) => {
-			if (options.modes[mode].type !== ModeTypes.Select) {
+			if (modesMap[mode].type !== ModeTypes.Select) {
 				return;
 			}
 			if (this._instanceSelectMode) {
@@ -92,12 +116,12 @@ class TerraDraw {
 			}
 		});
 
-		this._modes = { ...options.modes, static: this._mode };
+		this._modes = { ...modesMap, static: this._mode };
 		this._eventListeners = { change: [], select: [], deselect: [], finish: [] };
 		this._store = new GeoJSONStore();
 
 		const getChanged = (
-			ids: string[]
+			ids: string[],
 		): {
 			changed: GeoJSONStoreFeatures[];
 			unchanged: GeoJSONStoreFeatures[];
@@ -145,7 +169,7 @@ class TerraDraw {
 						unchanged,
 						updated: [],
 					},
-					this.getModeStyles()
+					this.getModeStyles(),
 				);
 			} else if (event === "update") {
 				this._adapter.render(
@@ -155,17 +179,17 @@ class TerraDraw {
 						unchanged,
 						updated: changed,
 					},
-					this.getModeStyles()
+					this.getModeStyles(),
 				);
 			} else if (event === "delete") {
 				this._adapter.render(
 					{ created: [], deletedIds: ids, unchanged, updated: [] },
-					this.getModeStyles()
+					this.getModeStyles(),
 				);
 			} else if (event === "styling") {
 				this._adapter.render(
 					{ created: [], deletedIds: [], unchanged, updated: [] },
-					this.getModeStyles()
+					this.getModeStyles(),
 				);
 			}
 		};
@@ -183,7 +207,7 @@ class TerraDraw {
 
 			this._adapter.render(
 				{ created: [], deletedIds: [], unchanged, updated: changed },
-				this.getModeStyles()
+				this.getModeStyles(),
 			);
 		};
 
@@ -209,7 +233,7 @@ class TerraDraw {
 						unchanged,
 						updated: changed,
 					},
-					this.getModeStyles()
+					this.getModeStyles(),
 				);
 			}
 		};
@@ -223,12 +247,13 @@ class TerraDraw {
 				project: this._adapter.project.bind(this._adapter),
 				unproject: this._adapter.unproject.bind(this._adapter),
 				setDoubleClickToZoom: this._adapter.setDoubleClickToZoom.bind(
-					this._adapter
+					this._adapter,
 				),
 				onChange: onChange,
 				onSelect: onSelect,
 				onDeselect: onDeselect,
 				onFinish: onFinish,
+				coordinatePrecision: this._adapter.getCoordinatePrecision(),
 			});
 		});
 	}
@@ -252,7 +277,7 @@ class TerraDraw {
 					feature.properties[SELECT_PROPERTIES.SELECTED]
 				) {
 					return this._modes[this._instanceSelectMode].styleFeature.bind(
-						this._modes[this._instanceSelectMode]
+						this._modes[this._instanceSelectMode],
 					)(feature);
 				}
 
@@ -261,6 +286,85 @@ class TerraDraw {
 			};
 		});
 		return modeStyles;
+	}
+
+	private featuresAtLocation(
+		{
+			lng,
+			lat,
+		}: {
+			lng: number;
+			lat: number;
+		},
+		options?: { pointerDistance: number; ignoreSelectFeatures: boolean },
+	) {
+		const pointerDistance =
+			options && options.pointerDistance !== undefined
+				? options.pointerDistance
+				: 30; // default is 30px
+
+		const ignoreSelectFeatures =
+			options && options.ignoreSelectFeatures !== undefined
+				? options.ignoreSelectFeatures
+				: true;
+
+		const unproject = this._adapter.unproject.bind(this._adapter);
+		const project = this._adapter.project.bind(this._adapter);
+
+		const inputPoint = project(lng, lat);
+
+		const bbox = createBBoxFromPoint({
+			unproject,
+			point: inputPoint,
+			pointerDistance,
+		});
+
+		const features = this._store.search(bbox as BBoxPolygon);
+
+		// TODO: This is designed to work in a similar way as FeatureAtPointerEvent
+		// perhaps at some point we could figure out how to unify them
+		return features.filter((feature) => {
+			if (
+				ignoreSelectFeatures &&
+				(feature.properties[SELECT_PROPERTIES.MID_POINT] ||
+					feature.properties[SELECT_PROPERTIES.SELECTION_POINT])
+			) {
+				return false;
+			}
+
+			if (feature.geometry.type === "Point") {
+				const pointCoordinates = feature.geometry.coordinates;
+				const pointXY = project(pointCoordinates[0], pointCoordinates[1]);
+				const distance = pixelDistance(inputPoint, pointXY);
+				return distance < pointerDistance;
+			} else if (feature.geometry.type === "LineString") {
+				const coordinates: Position[] = feature.geometry.coordinates;
+
+				for (let i = 0; i < coordinates.length - 1; i++) {
+					const coord = coordinates[i];
+					const nextCoord = coordinates[i + 1];
+					const distanceToLine = pixelDistanceToLine(
+						inputPoint,
+						project(coord[0], coord[1]),
+						project(nextCoord[0], nextCoord[1]),
+					);
+
+					if (distanceToLine < pointerDistance) {
+						return true;
+					}
+				}
+				return false;
+			} else {
+				const lngLatInsidePolygon = pointInPolygon(
+					[lng, lat],
+					feature.geometry.coordinates,
+				);
+
+				if (lngLatInsidePolygon) {
+					return true;
+				}
+			}
+		});
 	}
 
 	/**
@@ -274,7 +378,7 @@ class TerraDraw {
 	 */
 	setModeStyles<Styling extends Record<string, number | HexColor>>(
 		mode: string,
-		styles: Styling
+		styles: Styling,
 	) {
 		this.checkEnabled();
 		if (!this._modes[mode]) {
@@ -404,7 +508,7 @@ class TerraDraw {
 					"properties" in feature &&
 					typeof feature.properties === "object" &&
 					feature.properties !== null &&
-					"mode" in feature.properties
+					"mode" in feature.properties,
 			);
 
 			if (hasModeProperty) {
@@ -473,6 +577,54 @@ class TerraDraw {
 	}
 
 	/**
+	 * Gets the features at a given longitude and latitude.
+	 * Will return point and linestrings that are a given pixel distance
+	 * away from the lng/lat and any polygons which contain it.
+	 *
+	 * @alpha
+	 */
+	getFeaturesAtLngLat(
+		lngLat: { lng: number; lat: number },
+		options?: { pointerDistance: number; ignoreSelectFeatures: boolean },
+	) {
+		const { lng, lat } = lngLat;
+
+		return this.featuresAtLocation(
+			{
+				lng,
+				lat,
+			},
+			options,
+		);
+	}
+
+	/**
+	 * Takes a given pointer event and
+	 * Will return point and linestrings that are a given pixel distance
+	 * away from the lng/lat and any polygons which contain it.
+	 *
+	 * @alpha
+	 */
+	getFeaturesAtPointerEvent(
+		event: PointerEvent | MouseEvent,
+		options?: { pointerDistance: number; ignoreSelectFeatures: boolean },
+	) {
+		const getLngLatFromEvent = this._adapter.getLngLatFromEvent.bind(
+			this._adapter,
+		);
+
+		const lngLat = getLngLatFromEvent(event);
+
+		// If the pointer event is outside the container or the underlying library is
+		// not ready we can get null as a returned value
+		if (lngLat === null) {
+			return [];
+		}
+
+		return this.featuresAtLocation(lngLat, options);
+	}
+
+	/**
 	 * A method for stopping Terra Draw. Will clear the store, deregister the adapter and
 	 * remove any rendered layers in the process.
 	 *
@@ -493,7 +645,7 @@ class TerraDraw {
 	 */
 	on<T extends TerraDrawEvents>(
 		event: T,
-		callback: TerraDrawEventListeners[T]
+		callback: TerraDrawEventListeners[T],
 	) {
 		const listeners = this._eventListeners[
 			event
@@ -513,7 +665,7 @@ class TerraDraw {
 	 */
 	off<T extends TerraDrawEvents>(
 		event: TerraDrawEvents,
-		callback: TerraDrawEventListeners[T]
+		callback: TerraDrawEventListeners[T],
 	) {
 		const listeners = this._eventListeners[
 			event
@@ -548,6 +700,7 @@ export {
 	TerraDrawLeafletAdapter,
 	TerraDrawMapLibreGLAdapter,
 	TerraDrawOpenLayersAdapter,
+	TerraDrawArcGISMapsSDKAdapter,
 	TerraDrawExtend,
 
 	// Types that are required for 3rd party developers to extend

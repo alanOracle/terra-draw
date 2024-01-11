@@ -2,16 +2,21 @@ import {
 	TerraDrawMouseEvent,
 	TerraDrawKeyboardEvent,
 	SELECT_PROPERTIES,
-	HexColor,
 	TerraDrawAdapterStyling,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { Point, Position } from "geojson";
-import { ModeTypes, TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	ModeTypes,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { MidPointBehavior } from "./behaviors/midpoint.behavior";
 import { SelectionPointBehavior } from "./behaviors/selection-point.behavior";
-import { FeaturesAtMouseEventBehavior } from "./behaviors/features-at-mouse-event.behavior";
+import { FeatureAtPointerEventBehavior } from "./behaviors/feature-at-pointer-event.behavior";
 import { PixelDistanceBehavior } from "../pixel-distance.behavior";
 import { ClickBoundingBoxBehavior } from "../click-bounding-box.behavior";
 import { DragFeatureBehavior } from "./behaviors/drag-feature.behavior";
@@ -34,6 +39,7 @@ type ModeFlags = {
 		draggable?: boolean;
 		rotateable?: boolean;
 		scaleable?: boolean;
+		selfIntersectable?: boolean;
 		coordinates?: {
 			midpoints?: boolean;
 			draggable?: boolean;
@@ -72,6 +78,22 @@ type SelectionStyling = {
 	midPointOutlineWidth: NumericStyling;
 };
 
+interface Cursors {
+	pointerOver?: Cursor;
+	dragStart?: Cursor;
+	dragEnd?: Cursor;
+	insertMidpoint?: Cursor;
+}
+
+interface TerraDrawSelectModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	pointerDistance?: number;
+	flags?: { [mode: string]: ModeFlags };
+	keyEvents?: TerraDrawSelectModeKeyEvents | null;
+	dragEventThrottle?: number;
+	cursors?: Cursors;
+}
+
 export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling> {
 	public type = ModeTypes.Select;
 	public mode = "select";
@@ -86,24 +108,32 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	// Behaviors
 	private selectionPoints!: SelectionPointBehavior;
 	private midPoints!: MidPointBehavior;
-	private featuresAtMouseEvent!: FeaturesAtMouseEventBehavior;
+	private featuresAtMouseEvent!: FeatureAtPointerEventBehavior;
 	private pixelDistance!: PixelDistanceBehavior;
 	private clickBoundingBox!: ClickBoundingBoxBehavior;
 	private dragFeature!: DragFeatureBehavior;
 	private dragCoordinate!: DragCoordinateBehavior;
 	private rotateFeature!: RotateFeatureBehavior;
 	private scaleFeature!: ScaleFeatureBehavior;
+	private cursors: Required<Cursors>;
 
-	constructor(options?: {
-		styles?: Partial<SelectionStyling>;
-		pointerDistance?: number;
-		flags?: { [mode: string]: ModeFlags };
-		keyEvents?: TerraDrawSelectModeKeyEvents | null;
-		dragEventThrottle?: number;
-	}) {
+	constructor(options?: TerraDrawSelectModeOptions<SelectionStyling>) {
 		super(options);
 
 		this.flags = options && options.flags ? options.flags : {};
+
+		const defaultCursors = {
+			pointerOver: "move",
+			dragStart: "move",
+			dragEnd: "move",
+			insertMidpoint: "crosshair",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
 
 		// We want to have some defaults, but also allow key bindings
 		// to be explicitly turned off
@@ -134,13 +164,21 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			5;
 	}
 
+	setSelecting() {
+		if (this._state === "started") {
+			this._state = "selecting";
+		} else {
+			throw new Error("Mode must be started to move to selecting state");
+		}
+	}
+
 	registerBehaviors(config: BehaviorConfig) {
 		this.pixelDistance = new PixelDistanceBehavior(config);
 		this.clickBoundingBox = new ClickBoundingBoxBehavior(config);
-		this.featuresAtMouseEvent = new FeaturesAtMouseEventBehavior(
+		this.featuresAtMouseEvent = new FeatureAtPointerEventBehavior(
 			config,
 			this.clickBoundingBox,
-			this.pixelDistance
+			this.pixelDistance,
 		);
 
 		this.selectionPoints = new SelectionPointBehavior(config);
@@ -149,26 +187,26 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.rotateFeature = new RotateFeatureBehavior(
 			config,
 			this.selectionPoints,
-			this.midPoints
+			this.midPoints,
 		);
 
 		this.scaleFeature = new ScaleFeatureBehavior(
 			config,
 			this.selectionPoints,
-			this.midPoints
+			this.midPoints,
 		);
 
 		this.dragFeature = new DragFeatureBehavior(
 			config,
 			this.featuresAtMouseEvent,
 			this.selectionPoints,
-			this.midPoints
+			this.midPoints,
 		);
 		this.dragCoordinate = new DragCoordinateBehavior(
 			config,
 			this.pixelDistance,
 			this.selectionPoints,
-			this.midPoints
+			this.midPoints,
 		);
 	}
 
@@ -301,7 +339,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.selectionPoints.create(
 			coordinates,
 			geometry.type as "Polygon" | "LineString",
-			featureId
+			featureId,
 		);
 
 		if (
@@ -318,7 +356,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		const { clickedFeature, clickedMidPoint } = this.featuresAtMouseEvent.find(
 			event,
 
-			this.selected.length > 0
+			this.selected.length > 0,
 		);
 
 		if (this.selected.length && clickedMidPoint) {
@@ -327,7 +365,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 			this.midPoints.insert(
 				clickedMidPoint.id as string,
-				this.coordinatePrecision
+				this.coordinatePrecision,
 			);
 
 			return;
@@ -335,8 +373,16 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 		if (clickedFeature) {
 			const { mode } = this.store.getPropertiesCopy(
-				clickedFeature.id as string
+				clickedFeature.id as string,
 			);
+
+			// This will be undefined for points
+			const modeFlags = this.flags[mode as string];
+
+			// If feature is not selectable then return
+			if (!modeFlags || !modeFlags.feature) {
+				return;
+			}
 
 			const previouslySelectedId = this.selected[0];
 
@@ -352,13 +398,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				}
 			}
 
-			// This will be undefined for points
-			const modeFlags = this.flags[mode as string];
-
-			// If feature is not selectable then return
-			if (!modeFlags || !modeFlags.feature) {
-				return;
-			}
+			this.setCursor(this.cursors.pointerOver);
 
 			// Select feature
 			this.selected = [clickedFeature.id as string];
@@ -369,7 +409,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 			// Get the clicked feature
 			const { type, coordinates } = this.store.getGeometryCopy(
-				clickedFeature.id as string
+				clickedFeature.id as string,
 			);
 
 			this.setCursor("move");
@@ -387,14 +427,14 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				this.selectionPoints.create(
 					selectedCoords,
 					type,
-					clickedFeature.id as string
+					clickedFeature.id as string,
 				);
 
 				if (modeFlags.feature.coordinates.midpoints) {
 					this.midPoints.create(
 						selectedCoords,
 						clickedFeature.id as string,
-						this.coordinatePrecision
+						this.coordinatePrecision,
 					);
 				}
 			}
@@ -407,18 +447,22 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	/** @internal */
 	start() {
 		this.setStarted();
+		// this.setSelecting(); // Only setting "selecting" when the user wants to drag
 	}
 
 	/** @internal */
 	stop() {
-		this.setStarted();
 		this.cleanUp();
+		// this.setStarted(); // No need to set started since it should already be in that state
 		this.setStopped();
 	}
 
 	/** @internal */
 	onClick(event: TerraDrawMouseEvent) {
-		this.setStarted();
+		// Put back "started" state if we set "selecting" when onPointerDown
+		if (this.state === 'selecting'){
+			this.setStarted();
+		}
 		if (event.button === "right") {
 			// onRightClick will be only progrmatically callable
 			// this.onRightClick(event);
@@ -496,7 +540,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	/** @internal */
 	onDragStart(
 		event: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) {
 		// We only need to stop the map dragging if
 		// we actually have something selected
@@ -525,7 +569,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		const selectedId = this.selected[0];
 		const draggableCoordinateIndex = this.dragCoordinate.getDraggableIndex(
 			event,
-			selectedId
+			selectedId,
 		);
 
 		if (
@@ -535,6 +579,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			modeFlags.feature.coordinates.draggable &&
 			draggableCoordinateIndex !== -1
 		) {
+			this.setCursor(this.cursors.dragStart);
 			this.dragCoordinate.startDragging(selectedId, draggableCoordinateIndex);
 			setMapDraggability(false);
 
@@ -553,6 +598,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			modeFlags.feature.draggable &&
 			this.dragFeature.canDrag(event, selectedId)
 		) {
+			this.setCursor(this.cursors.dragStart);
 			this.dragFeature.startDragging(event, selectedId);
 			setMapDraggability(false);
 
@@ -601,7 +647,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			modeFlags.feature.coordinates.draggable &&
 			draggableCoordinateIndex !== -1
 		) {
-			this.setSelected();
+			this.setSelecting();
 			return;
 		}
 
@@ -611,7 +657,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			modeFlags.feature.draggable &&
 			this.dragFeature.canDrag(event, selectedId)
 		) {
-			this.setSelected();
+			this.setSelecting();
 			return;
 		}
 	}
@@ -619,7 +665,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	/** @internal */
 	onDrag(
 		event: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) {
 		const selectedId = this.selected[0];
 
@@ -630,6 +676,10 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 		const properties = this.store.getPropertiesCopy(selectedId);
 		const modeFlags = this.flags[properties.mode as string];
+		const canSelfIntersect: boolean =
+			(modeFlags &&
+				modeFlags.feature &&
+				modeFlags.feature.selfIntersectable) === true;
 
 		// Ensure drag count is incremented
 		this.dragEventCount++;
@@ -666,7 +716,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 		// Check if coordinate is draggable and is dragged
 		if (this.dragCoordinate.isDragging()) {
-			this.dragCoordinate.drag(event);
+			this.dragCoordinate.drag(event, canSelfIntersect);
 			return;
 		}
 
@@ -682,9 +732,18 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 	/** @internal */
 	onDragEnd(
 		_: TerraDrawMouseEvent,
-		setMapDraggability: (enabled: boolean) => void
+		setMapDraggability: (enabled: boolean) => void,
 	) {
 		this.setCursorStyle(_);
+
+		// If we have finished dragging a coordinate or a feature
+		// lets fire an onFinish event which can be listened to
+		if (this.dragCoordinate.isDragging()) {
+			this.onFinish(this.selected[0]);
+		} else if (this.dragFeature.isDragging()) {
+			this.onFinish(this.selected[0]);
+		}
+
 		this.rotateFeature.reset();
 		this.scaleFeature.reset();
 		setMapDraggability(true);
@@ -701,7 +760,10 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			this.createSelectionAndMidPoints();
 		}
 
-		this.setStarted();
+		// Put back "started" state if we set "selecting" when onPointerDown
+		if (this.state === 'selecting'){
+			this.setStarted();
+		}
 		this.dragCoordinate.stopDragging();
 		this.dragFeature.stopDragging();
 	}
@@ -709,30 +771,37 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
-		if (!this.selected.length || this.dragFeature.isDragging()) {
+		if (!this.selected.length) {
+			this.setCursor("unset");
 			return;
 		}
 
-		let nearbySelectionPoint = false;
+		if (this.dragFeature.isDragging()) {
+			return;
+		}
+
+		let nearbyMidPoint = false;
 		this.midPoints.ids.forEach((id: string) => {
-			if (nearbySelectionPoint) {
+			if (nearbyMidPoint) {
 				return;
 			}
 			const geometry = this.store.getGeometryCopy<Point>(id);
 			const distance = this.pixelDistance.measure(event, geometry.coordinates);
 
 			if (distance < this.pointerDistance) {
-				nearbySelectionPoint = true;
+				nearbyMidPoint = true;
 			}
 		});
 
+		let nearbySelectionPoint = false;
 		// TODO: Is there a cleaner way to handle prioritising
 		// dragging selection points?
 		this.selectionPoints.ids.forEach((id: string) => {
 			const geometry = this.store.getGeometryCopy<Point>(id);
 			const distance = this.pixelDistance.measure(event, geometry.coordinates);
 			if (distance < this.pointerDistance) {
-				nearbySelectionPoint = false;
+				nearbyMidPoint = false;
+				nearbySelectionPoint = true;
 			}
 		});
 		if (nearbySelectionPoint) {
@@ -754,25 +823,25 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				styles.pointColor = this.getHexColorStylingValue(
 					this.styles.selectionPointColor,
 					styles.pointColor,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineColor = this.getHexColorStylingValue(
 					this.styles.selectionPointOutlineColor,
 					styles.pointOutlineColor,
-					feature
+					feature,
 				);
 
 				styles.pointWidth = this.getNumericStylingValue(
 					this.styles.selectionPointWidth,
 					styles.pointWidth,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineWidth = this.getNumericStylingValue(
 					this.styles.selectionPointOutlineWidth,
 					2,
-					feature
+					feature,
 				);
 
 				styles.zIndex = 30;
@@ -784,25 +853,25 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				styles.pointColor = this.getHexColorStylingValue(
 					this.styles.midPointColor,
 					styles.pointColor,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineColor = this.getHexColorStylingValue(
 					this.styles.midPointOutlineColor,
 					styles.pointOutlineColor,
-					feature
+					feature,
 				);
 
 				styles.pointWidth = this.getNumericStylingValue(
 					this.styles.midPointWidth,
 					4,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineWidth = this.getNumericStylingValue(
 					this.styles.midPointOutlineWidth,
 					2,
-					feature
+					feature,
 				);
 
 				styles.zIndex = 40;
@@ -817,25 +886,25 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				styles.polygonFillColor = this.getHexColorStylingValue(
 					this.styles.selectedPolygonColor,
 					styles.polygonFillColor,
-					feature
+					feature,
 				);
 
 				styles.polygonOutlineWidth = this.getNumericStylingValue(
 					this.styles.selectedPolygonOutlineWidth,
 					styles.polygonOutlineWidth,
-					feature
+					feature,
 				);
 
 				styles.polygonOutlineColor = this.getHexColorStylingValue(
 					this.styles.selectedPolygonOutlineColor,
 					styles.polygonOutlineColor,
-					feature
+					feature,
 				);
 
 				styles.polygonFillOpacity = this.getNumericStylingValue(
 					this.styles.selectedPolygonFillOpacity,
 					styles.polygonFillOpacity,
-					feature
+					feature,
 				);
 
 				styles.zIndex = 10;
@@ -844,13 +913,13 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				styles.lineStringColor = this.getHexColorStylingValue(
 					this.styles.selectedLineStringColor,
 					styles.lineStringColor,
-					feature
+					feature,
 				);
 
 				styles.lineStringWidth = this.getNumericStylingValue(
 					this.styles.selectedLineStringWidth,
 					styles.lineStringWidth,
-					feature
+					feature,
 				);
 
 				styles.zIndex = 10;
@@ -859,25 +928,25 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				styles.pointWidth = this.getNumericStylingValue(
 					this.styles.selectedPointWidth,
 					styles.pointWidth,
-					feature
+					feature,
 				);
 
 				styles.pointColor = this.getHexColorStylingValue(
 					this.styles.selectedPointColor,
 					styles.pointColor,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineColor = this.getHexColorStylingValue(
 					this.styles.selectedPointOutlineColor,
 					styles.pointOutlineColor,
-					feature
+					feature,
 				);
 
 				styles.pointOutlineWidth = this.getNumericStylingValue(
 					this.styles.selectedPointOutlineWidth,
 					styles.pointOutlineWidth,
-					feature
+					feature,
 				);
 
 				styles.zIndex = 10;

@@ -141,6 +141,7 @@ describe("TerraDrawCircleMode", () => {
 				circleMode.register(mockConfig);
 				circleMode.start();
 			});
+
 			it("adds a circle to store if registered", () => {
 				circleMode.onClick({
 					lng: 0,
@@ -180,7 +181,7 @@ describe("TerraDrawCircleMode", () => {
 				features = store.copyAll();
 				expect(features.length).toBe(1);
 
-				expect(onChange).toBeCalledTimes(1);
+				expect(onChange).toBeCalledTimes(2);
 				expect(onChange).toBeCalledWith([expect.any(String)], "create");
 
 				expect(onFinish).toBeCalledTimes(1);
@@ -266,7 +267,7 @@ describe("TerraDrawCircleMode", () => {
 			expect(onChange).toHaveBeenNthCalledWith(
 				1,
 				[expect.any(String)],
-				"create"
+				"create",
 			);
 
 			const feature = store.copyAll()[0];
@@ -283,21 +284,20 @@ describe("TerraDrawCircleMode", () => {
 			expect(onChange).toHaveBeenNthCalledWith(
 				2,
 				[expect.any(String)],
-				"update"
+				"update",
 			);
 
 			const updatedFeature = store.copyAll()[0];
 
 			expect(feature.id).toBe(updatedFeature.id);
 			expect(feature.geometry.coordinates).not.toStrictEqual(
-				updatedFeature.geometry.coordinates
+				updatedFeature.geometry.coordinates,
 			);
 		});
 	});
 
 	describe("cleanUp", () => {
 		let circleMode: TerraDrawCircleMode;
-		let store: GeoJSONStore;
 		let onChange: jest.Mock;
 
 		beforeEach(() => {
@@ -305,7 +305,6 @@ describe("TerraDrawCircleMode", () => {
 
 			const mockConfig = getMockModeConfig(circleMode.mode);
 
-			store = mockConfig.store;
 			onChange = mockConfig.onChange;
 
 			circleMode.register(mockConfig);
@@ -333,7 +332,7 @@ describe("TerraDrawCircleMode", () => {
 			expect(onChange).toHaveBeenNthCalledWith(
 				2,
 				[expect.any(String)],
-				"delete"
+				"delete",
 			);
 		});
 	});
@@ -341,8 +340,6 @@ describe("TerraDrawCircleMode", () => {
 	describe("onKeyUp", () => {
 		let store: GeoJSONStore;
 		let circleMode: TerraDrawCircleMode;
-		let onChange: jest.Mock;
-		let project: jest.Mock;
 
 		beforeEach(() => {
 			jest.resetAllMocks();
@@ -350,8 +347,6 @@ describe("TerraDrawCircleMode", () => {
 
 			const mockConfig = getMockModeConfig(circleMode.mode);
 			store = mockConfig.store;
-			onChange = mockConfig.onChange;
-			project = mockConfig.project;
 			circleMode.register(mockConfig);
 			circleMode.start();
 		});
@@ -394,8 +389,6 @@ describe("TerraDrawCircleMode", () => {
 
 				const mockConfig = getMockModeConfig(circleMode.mode);
 				store = mockConfig.store;
-				onChange = mockConfig.onChange;
-				project = mockConfig.project;
 				circleMode.register(mockConfig);
 				circleMode.start();
 
@@ -469,7 +462,7 @@ describe("TerraDrawCircleMode", () => {
 					type: "Feature",
 					geometry: { type: "Polygon", coordinates: [] },
 					properties: { mode: "circle" },
-				})
+				}),
 			).toMatchObject({
 				polygonFillColor: "#ffffff",
 				polygonOutlineColor: "#ffffff",
@@ -493,7 +486,7 @@ describe("TerraDrawCircleMode", () => {
 					type: "Feature",
 					geometry: { type: "Polygon", coordinates: [] },
 					properties: { mode: "circle" },
-				})
+				}),
 			).toMatchObject({
 				polygonFillColor: "#ffffff",
 				polygonOutlineColor: "#ffffff",
@@ -513,6 +506,7 @@ describe("TerraDrawCircleMode", () => {
 					fillOpacity: 0.5,
 				},
 			});
+			circleMode.register(getMockModeConfig("circle"));
 
 			expect(
 				circleMode.validateFeature({
@@ -527,7 +521,7 @@ describe("TerraDrawCircleMode", () => {
 						createdAt: 1685568434891,
 						updatedAt: 1685568435434,
 					},
-				})
+				}),
 			).toBe(false);
 		});
 
@@ -540,6 +534,7 @@ describe("TerraDrawCircleMode", () => {
 					fillOpacity: 0.5,
 				},
 			});
+			circleMode.register(getMockModeConfig("circle"));
 
 			expect(
 				circleMode.validateFeature({
@@ -622,7 +617,7 @@ describe("TerraDrawCircleMode", () => {
 						createdAt: 1685568434891,
 						updatedAt: 1685568435434,
 					},
-				})
+				}),
 			).toBe(true);
 		});
 	});

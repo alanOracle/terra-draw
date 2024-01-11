@@ -1,27 +1,23 @@
-let options = {};
+console.log("===== Using ts-jest ======");
 
-if (process.env.NO_CHECK) {
-	options = {
-		transform: {
-			"^.+\\.(t|j)sx?$": "@swc/jest",
+module.exports = {
+	preset: "ts-jest",
+	testEnvironment: "node",
+	testPathIgnorePatterns: [
+		"<rootDir>/node_modules/",
+		"<rootDir>/e2e/",
+		"<rootDir>/docs/",
+		"<rootDir>/coverage/",
+		"<rootDir>/scripts/",
+		"<rootDir>/guides/",
+	],
+	coveragePathIgnorePatterns: ["<rootDir>/src/test/", "<rootDir>/e2e/"],
+	setupFilesAfterEnv: ["<rootDir>/src/test/jest.matchers.ts"],
+	collectCoverage: true,
+	collectCoverageFrom: ["./src/**"],
+	coverageThreshold: {
+		global: {
+			lines: 65,
 		},
-		coveragePathIgnorePatterns: ["<rootDir>/src/test/"],
-		setupFilesAfterEnv: ["<rootDir>/src/test/jest.matchers.ts"],
-	};
-} else {
-	options = {
-		preset: "ts-jest",
-		testEnvironment: "node",
-		coveragePathIgnorePatterns: ["<rootDir>/src/test/"],
-		setupFilesAfterEnv: ["<rootDir>/src/test/jest.matchers.ts"],
-		collectCoverage: true,
-		collectCoverageFrom: ["./src/**"],
-		coverageThreshold: {
-			global: {
-				lines: 65,
-			},
-		},
-	};
-}
-
-module.exports = options;
+	},
+};

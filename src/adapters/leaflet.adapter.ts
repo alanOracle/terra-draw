@@ -35,7 +35,6 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 	 */
 	private createPaneStyleSheet(pane: string, zIndex: number) {
 		const style = document.createElement("style");
-		style.type = "text/css";
 		style.innerHTML = `.leaflet-${pane} {z-index: ${zIndex};}`;
 		document.getElementsByTagName("head")[0].appendChild(style);
 		this._map.createPane(pane);
@@ -71,13 +70,13 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 	 * @param styling - The styling function
 	 * */
 	private styleGeoJSONLayer(
-		styling: TerraDrawStylingFunction
+		styling: TerraDrawStylingFunction,
 	): L.GeoJSONOptions {
 		return {
 			// Style points - convert markers to circle markers
 			pointToLayer: (
 				feature: GeoJSONStoreFeatures,
-				latlng: L.LatLngExpression
+				latlng: L.LatLngExpression,
 			) => {
 				if (!feature.properties) {
 					throw new Error("Feature has no properties");
@@ -95,7 +94,7 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 				if (!pane) {
 					this._panes[paneId] = this.createPaneStyleSheet(
 						paneId,
-						featureStyles.zIndex
+						featureStyles.zIndex,
 					);
 				}
 
@@ -132,7 +131,7 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 				if (!pane) {
 					this._panes[paneId] = this.createPaneStyleSheet(
 						paneId,
-						featureStyles.zIndex
+						featureStyles.zIndex,
 					);
 				}
 
@@ -166,7 +165,8 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 	 * @returns An object with 'lng' and 'lat' properties representing the longitude and latitude, or null if the conversion is not possible.
 	 */
 	public getLngLatFromEvent(event: PointerEvent | MouseEvent) {
-		const { containerX: x, containerY: y } = this.getContainerXYPosition(event);
+		const { containerX: x, containerY: y } =
+			this.getMapElementXYPosition(event);
 
 		const point = { x, y } as L.Point;
 
@@ -184,10 +184,10 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 	}
 
 	/**
-	 * Retrieves the HTML container element of the Leaflet map.
+	 * Retrieves the HTML element of the Leaflet element that handles interaction events
 	 * @returns The HTMLElement representing the map container.
 	 */
-	public getMapContainer() {
+	public getMapEventElement() {
 		return this._container;
 	}
 
@@ -234,9 +234,9 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 	 */
 	public setCursor(cursor: Parameters<SetCursor>[0]) {
 		if (cursor === "unset") {
-			this.getMapContainer().style.removeProperty("cursor");
+			this.getMapEventElement().style.removeProperty("cursor");
 		} else {
-			this.getMapContainer().style.cursor = cursor;
+			this.getMapEventElement().style.cursor = cursor;
 		}
 	}
 
@@ -261,7 +261,7 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 		changes.created.forEach((created) => {
 			this._layers[created.id as string] = this._lib.geoJSON(
 				created,
-				this.styleGeoJSONLayer(styling)
+				this.styleGeoJSONLayer(styling),
 			);
 			this._map.addLayer(this._layers[created.id as string]);
 		});
@@ -274,7 +274,7 @@ export class TerraDrawLeafletAdapter extends TerraDrawBaseAdapter {
 			this._map.removeLayer(this._layers[updated.id as string]);
 			this._layers[updated.id as string] = this._lib.geoJSON(
 				updated,
-				this.styleGeoJSONLayer(styling)
+				this.styleGeoJSONLayer(styling),
 			);
 			this._map.addLayer(this._layers[updated.id as string]);
 		});

@@ -1,6 +1,5 @@
 import { TerraDrawMouseEvent } from "../../common";
 import { getMockModeConfig } from "../../test/mock-config";
-import { getDefaultStyling } from "../../util/styling";
 import { TerraDrawPointMode } from "./point.mode";
 
 describe("TerraDrawPointMode", () => {
@@ -122,7 +121,7 @@ describe("TerraDrawPointMode", () => {
 			expect(mockConfig.onChange).toBeCalledTimes(1);
 			expect(mockConfig.onChange).toBeCalledWith(
 				[expect.any(String)],
-				"create"
+				"create",
 			);
 		});
 	});
@@ -235,7 +234,7 @@ describe("TerraDrawPointMode", () => {
 					type: "Feature",
 					geometry: { type: "Point", coordinates: [] },
 					properties: { mode: "point" },
-				})
+				}),
 			).toMatchObject({
 				pointColor: "#ffffff",
 				pointWidth: 4,
@@ -259,7 +258,7 @@ describe("TerraDrawPointMode", () => {
 					type: "Feature",
 					geometry: { type: "Point", coordinates: [] },
 					properties: { mode: "point" },
-				})
+				}),
 			).toMatchObject({
 				pointColor: "#ffffff",
 				pointWidth: 4,
@@ -277,6 +276,8 @@ describe("TerraDrawPointMode", () => {
 				},
 			});
 
+			pointMode.register(getMockModeConfig("point"));
+
 			expect(
 				pointMode.validateFeature({
 					id: "ed030248-d7ee-45a2-b8e8-37ad2f622509",
@@ -290,7 +291,7 @@ describe("TerraDrawPointMode", () => {
 						createdAt: 1685654949450,
 						updatedAt: 1685654950609,
 					},
-				})
+				}),
 			).toBe(false);
 		});
 
@@ -300,6 +301,8 @@ describe("TerraDrawPointMode", () => {
 					pointColor: "#ffffff",
 				},
 			});
+
+			pointMode.register(getMockModeConfig("point"));
 
 			expect(
 				pointMode.validateFeature({
@@ -314,7 +317,7 @@ describe("TerraDrawPointMode", () => {
 						createdAt: 1685654949450,
 						updatedAt: 1685654950609,
 					},
-				})
+				}),
 			).toBe(true);
 		});
 	});

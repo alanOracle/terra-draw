@@ -2,13 +2,17 @@ import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
 	TerraDrawKeyboardEvent,
-	HexColor,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { LineString } from "geojson";
 import { selfIntersects } from "../../geometry/boolean/self-intersects";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { pixelDistance } from "../../geometry/measure/pixel-distance";
 import { BehaviorConfig } from "../base.behavior";
 import { ClickBoundingBoxBehavior } from "../click-bounding-box.behavior";
@@ -31,6 +35,20 @@ type LineStringStyling = {
 	closingPointOutlineWidth: NumericStyling;
 };
 
+interface Cursors {
+	start?: Cursor;
+	close?: Cursor;
+}
+
+interface TerraDrawLineStringModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	snapping?: boolean;
+	allowSelfIntersections?: boolean;
+	pointerDistance?: number;
+	keyEvents?: TerraDrawLineStringModeKeyEvents | null;
+	cursors?: Cursors;
+}
+
 export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringStyling> {
 	mode = "linestring";
 
@@ -40,20 +58,25 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 	private allowSelfIntersections;
 	private keyEvents: TerraDrawLineStringModeKeyEvents;
 	private snappingEnabled: boolean;
-
+	private cursors: Required<Cursors>;
 	private mouseMove = false;
 
 	// Behaviors
 	private snapping!: SnappingBehavior;
 
-	constructor(options?: {
-		snapping?: boolean;
-		allowSelfIntersections?: boolean;
-		pointerDistance?: number;
-		styles?: Partial<LineStringStyling>;
-		keyEvents?: TerraDrawLineStringModeKeyEvents | null;
-	}) {
+	constructor(options?: TerraDrawLineStringModeOptions<LineStringStyling>) {
 		super(options);
+
+		const defaultCursors = {
+			start: "crosshair",
+			close: "pointer",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
 
 		this.snappingEnabled =
 			options && options.snapping !== undefined ? options.snapping : false;
@@ -82,7 +105,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 		}
 
 		const currentLineGeometry = this.store.getGeometryCopy<LineString>(
-			this.currentId
+			this.currentId,
 		);
 
 		// Finish off the drawing
@@ -119,14 +142,14 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 		this.snapping = new SnappingBehavior(
 			config,
 			new PixelDistanceBehavior(config),
-			new ClickBoundingBoxBehavior(config)
+			new ClickBoundingBoxBehavior(config),
 		);
 	}
 
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 	}
 
 	/** @internal */
@@ -139,13 +162,13 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
 		this.mouseMove = true;
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 
 		if (!this.currentId || this.currentCoordinate === 0) {
 			return;
 		}
 		const currentLineGeometry = this.store.getGeometryCopy<LineString>(
-			this.currentId
+			this.currentId,
 		);
 
 		// Remove the 'live' point that changes on mouse move
@@ -166,13 +189,13 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			const { x, y } = this.project(previousLng, previousLat);
 			const distance = pixelDistance(
 				{ x, y },
-				{ x: event.containerX, y: event.containerY }
+				{ x: event.containerX, y: event.containerY },
 			);
 
 			const isClosingClick = distance < this.pointerDistance;
 
 			if (isClosingClick) {
-				this.setCursor("pointer");
+				this.setCursor(this.cursors.close);
 			}
 		}
 
@@ -223,7 +246,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			this.setDrawing();
 		} else if (this.currentCoordinate === 1 && this.currentId) {
 			const currentLineGeometry = this.store.getGeometryCopy<LineString>(
-				this.currentId
+				this.currentId,
 			);
 
 			const [pointId] = this.store.create([
@@ -239,7 +262,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 
 			// We are creating the point so we immediately want
 			// to set the point cursor to show it can be closed
-			this.setCursor("pointer");
+			this.setCursor(this.cursors.close);
 
 			this.store.updateGeometry([
 				{
@@ -258,7 +281,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			this.currentCoordinate++;
 		} else if (this.currentId) {
 			const currentLineGeometry = this.store.getGeometryCopy<LineString>(
-				this.currentId
+				this.currentId,
 			);
 
 			const [previousLng, previousLat] =
@@ -268,7 +291,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			const { x, y } = this.project(previousLng, previousLat);
 			const distance = pixelDistance(
 				{ x, y },
-				{ x: event.containerX, y: event.containerY }
+				{ x: event.containerX, y: event.containerY },
 			);
 
 			const isClosingClick = distance < this.pointerDistance;
@@ -295,7 +318,7 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 				}
 
 				if (this.closingPointId) {
-					this.setCursor("pointer");
+					this.setCursor(this.cursors.close);
 
 					this.store.updateGeometry([
 						{ id: this.currentId, geometry: newLineString },
@@ -370,13 +393,13 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			styles.lineStringColor = this.getHexColorStylingValue(
 				this.styles.lineStringColor,
 				styles.lineStringColor,
-				feature
+				feature,
 			);
 
 			styles.lineStringWidth = this.getNumericStylingValue(
 				this.styles.lineStringWidth,
 				styles.lineStringWidth,
-				feature
+				feature,
 			);
 
 			return styles;
@@ -388,25 +411,25 @@ export class TerraDrawLineStringMode extends TerraDrawBaseDrawMode<LineStringSty
 			styles.pointColor = this.getHexColorStylingValue(
 				this.styles.closingPointColor,
 				styles.pointColor,
-				feature
+				feature,
 			);
 
 			styles.pointWidth = this.getNumericStylingValue(
 				this.styles.closingPointWidth,
 				styles.pointWidth,
-				feature
+				feature,
 			);
 
 			styles.pointOutlineColor = this.getHexColorStylingValue(
 				this.styles.closingPointOutlineColor,
 				"#ffffff",
-				feature
+				feature,
 			);
 
 			styles.pointOutlineWidth = this.getNumericStylingValue(
 				this.styles.closingPointOutlineWidth,
 				2,
-				feature
+				feature,
 			);
 
 			return styles;

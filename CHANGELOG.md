@@ -2,6 +2,241 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.1-alpha.53](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.51...v0.0.1-alpha.53) (2023-12-30)
+
+
+### Features
+
+* improved development mapping library integrations ([#127](https://github.com/JamesLMilner/terra-draw/issues/127)) ([2537dc7](https://github.com/JamesLMilner/terra-draw/commit/2537dc7689dc0eea0352e51dd302fcdc64126d44))
+
+
+### Bug Fixes
+
+* add TerraDrawArcGISMapsSDKAdapter to terra-draw exports ([#126](https://github.com/JamesLMilner/terra-draw/issues/126)) ([a2cb2ba](https://github.com/JamesLMilner/terra-draw/commit/a2cb2bad585073118547d8d64aabde80eae90c99)), closes [#58](https://github.com/JamesLMilner/terra-draw/issues/58)
+* ensure circle mode works on touch devices ([#152](https://github.com/JamesLMilner/terra-draw/issues/152)) ([ebdaed6](https://github.com/JamesLMilner/terra-draw/commit/ebdaed62c71f9154ca6f8be958d539539b5d05c0))
+* ensure coordinate precision is set via the config to the adapter ([#141](https://github.com/JamesLMilner/terra-draw/issues/141)) ([0407295](https://github.com/JamesLMilner/terra-draw/commit/0407295ec70a0d1b4adc53f8d46e77285b7f72c9))
+* ensure cursors are respected properly for the Google Maps API ([#134](https://github.com/JamesLMilner/terra-draw/issues/134)) ([360981a](https://github.com/JamesLMilner/terra-draw/commit/360981aaa20ba097a6a1449128a0e6a840bf1fa4))
+* ensure full commit history is fetched for releasing so changelog is populated correctly ([#158](https://github.com/JamesLMilner/terra-draw/issues/158)) ([12c375f](https://github.com/JamesLMilner/terra-draw/commit/12c375fb7ac2d829f87379ba7c269a6d2afdca7b))
+* ensure that rendered layers are removed properly on clear for MapboxGL/MapLibreGL ([#140](https://github.com/JamesLMilner/terra-draw/issues/140)) ([3aa95b5](https://github.com/JamesLMilner/terra-draw/commit/3aa95b51f040ccbfa4fbf57a594671553a925562))
+* fix another test after Google Maps API keyboard fix ([7214528](https://github.com/JamesLMilner/terra-draw/commit/721452857621046979680a561b56b4a509391fac))
+* fix tests for Google Maps API after keyboard fix ([af40901](https://github.com/JamesLMilner/terra-draw/commit/af409012b8694aa588aab20d038fbd83b6b383ae))
+* handle coordinate precision at the adapter level and make sure modes respect it ([47555a8](https://github.com/JamesLMilner/terra-draw/commit/47555a88b9deb905650a2710da0c7dc65fe80181))
+
+
+### Styling
+
+* added white stroke to logo ([#124](https://github.com/JamesLMilner/terra-draw/issues/124)) ([127d717](https://github.com/JamesLMilner/terra-draw/commit/127d717466ed04f6c44b5267b545073654ccdb84))
+
+
+### Tests
+
+* add basic tests for Rectangle, Circle, Great Circle and Select modes ([#151](https://github.com/JamesLMilner/terra-draw/issues/151)) ([4825301](https://github.com/JamesLMilner/terra-draw/commit/48253019c2d7fcecb69fe32ceebe9d80217312f8))
+* fix unit tests for arcgis adapter ([2d40699](https://github.com/JamesLMilner/terra-draw/commit/2d40699139565c973a367c1a786cb8cd9676ef15))
+
+
+### Documentation
+
+* add better documentation on selecting features ([#154](https://github.com/JamesLMilner/terra-draw/issues/154)) ([6691ae8](https://github.com/JamesLMilner/terra-draw/commit/6691ae81bbcb5746392e6982e5c8e312a34ccf46))
+* add store documentation to the guides ([#155](https://github.com/JamesLMilner/terra-draw/issues/155)) ([0a25d0e](https://github.com/JamesLMilner/terra-draw/commit/0a25d0e999127b5278db0d544e4abe61c91584c7))
+* expanded guide pages and other small improvements ([#123](https://github.com/JamesLMilner/terra-draw/issues/123)) ([b550669](https://github.com/JamesLMilner/terra-draw/commit/b550669b26bbef85a9c94506fd8c3857ae54da35))
+* guides overhaul ([#128](https://github.com/JamesLMilner/terra-draw/issues/128)) ([6eb26c3](https://github.com/JamesLMilner/terra-draw/commit/6eb26c353c68791b2b4223f793284d251f54ce85))
+* update docs to reflect TerraDrawArcGISMapsSDKAdapter export ([79cfb56](https://github.com/JamesLMilner/terra-draw/commit/79cfb5647aca092a5cf057f2bf4d559944b8afbd))
+
+
+### Chore
+
+* add assurances to release script to prevent invalid changelog ([#157](https://github.com/JamesLMilner/terra-draw/issues/157)) ([df04e5a](https://github.com/JamesLMilner/terra-draw/commit/df04e5a7849de95f6aa8ef0c357cacdbf69b7274))
+* add clarification around E2E README ([#149](https://github.com/JamesLMilner/terra-draw/issues/149)) ([f18a2aa](https://github.com/JamesLMilner/terra-draw/commit/f18a2aa42306456769b242eddc128a077bb07421))
+* add e2e testing suite using Playwright ([#144](https://github.com/JamesLMilner/terra-draw/issues/144)) ([05c00d9](https://github.com/JamesLMilner/terra-draw/commit/05c00d9c2287a779b7d48d76cd5e517b444642fd))
+* add linting as a step on CI ([#146](https://github.com/JamesLMilner/terra-draw/issues/146)) ([a690ba7](https://github.com/JamesLMilner/terra-draw/commit/a690ba76abe9f478b4b35bdb9e1a01663a2f678f))
+* allow release from GitHub actions by using PAT ([#159](https://github.com/JamesLMilner/terra-draw/issues/159)) ([a791968](https://github.com/JamesLMilner/terra-draw/commit/a791968ab7641ab84ae8afb85fe073f2cbdd5f17))
+* attempt push to main first before pushing tags incase push to main fails ([#160](https://github.com/JamesLMilner/terra-draw/issues/160)) ([935f472](https://github.com/JamesLMilner/terra-draw/commit/935f472913fb0a11a68b2f02c3196fa42783f830))
+* cache playwright browser ([#148](https://github.com/JamesLMilner/terra-draw/issues/148)) ([e017e15](https://github.com/JamesLMilner/terra-draw/commit/e017e1547c151feeda4e11756ee3e7e0891914e1))
+* **release:** 0.0.1-alpha.52 ([5abd9e8](https://github.com/JamesLMilner/terra-draw/commit/5abd9e85d71ad857fb3633f93fe3f22809f7e6ea))
+
+### [0.0.1-alpha.52](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.51...v0.0.1-alpha.52) (2023-12-26)
+
+
+### Features
+
+* improved development mapping library integrations ([#127](https://github.com/JamesLMilner/terra-draw/issues/127)) ([2537dc7](https://github.com/JamesLMilner/terra-draw/commit/2537dc7689dc0eea0352e51dd302fcdc64126d44))
+
+
+### Bug Fixes
+
+* add TerraDrawArcGISMapsSDKAdapter to terra-draw exports ([#126](https://github.com/JamesLMilner/terra-draw/issues/126)) ([a2cb2ba](https://github.com/JamesLMilner/terra-draw/commit/a2cb2bad585073118547d8d64aabde80eae90c99)), closes [#58](https://github.com/JamesLMilner/terra-draw/issues/58)
+* ensure circle mode works on touch devices ([#152](https://github.com/JamesLMilner/terra-draw/issues/152)) ([ebdaed6](https://github.com/JamesLMilner/terra-draw/commit/ebdaed62c71f9154ca6f8be958d539539b5d05c0))
+* ensure coordinate precision is set via the config to the adapter ([#141](https://github.com/JamesLMilner/terra-draw/issues/141)) ([0407295](https://github.com/JamesLMilner/terra-draw/commit/0407295ec70a0d1b4adc53f8d46e77285b7f72c9))
+* ensure cursors are respected properly for the Google Maps API ([#134](https://github.com/JamesLMilner/terra-draw/issues/134)) ([360981a](https://github.com/JamesLMilner/terra-draw/commit/360981aaa20ba097a6a1449128a0e6a840bf1fa4))
+* ensure that rendered layers are removed properly on clear for MapboxGL/MapLibreGL ([#140](https://github.com/JamesLMilner/terra-draw/issues/140)) ([3aa95b5](https://github.com/JamesLMilner/terra-draw/commit/3aa95b51f040ccbfa4fbf57a594671553a925562))
+* fix another test after Google Maps API keyboard fix ([7214528](https://github.com/JamesLMilner/terra-draw/commit/721452857621046979680a561b56b4a509391fac))
+* fix tests for Google Maps API after keyboard fix ([af40901](https://github.com/JamesLMilner/terra-draw/commit/af409012b8694aa588aab20d038fbd83b6b383ae))
+* handle coordinate precision at the adapter level and make sure modes respect it ([47555a8](https://github.com/JamesLMilner/terra-draw/commit/47555a88b9deb905650a2710da0c7dc65fe80181))
+
+
+### Styling
+
+* added white stroke to logo ([#124](https://github.com/JamesLMilner/terra-draw/issues/124)) ([127d717](https://github.com/JamesLMilner/terra-draw/commit/127d717466ed04f6c44b5267b545073654ccdb84))
+
+
+### Documentation
+
+* expanded guide pages and other small improvements ([#123](https://github.com/JamesLMilner/terra-draw/issues/123)) ([b550669](https://github.com/JamesLMilner/terra-draw/commit/b550669b26bbef85a9c94506fd8c3857ae54da35))
+* update docs to reflect TerraDrawArcGISMapsSDKAdapter export ([79cfb56](https://github.com/JamesLMilner/terra-draw/commit/79cfb5647aca092a5cf057f2bf4d559944b8afbd))
+
+
+### Chore
+
+* add clarification around E2E README ([#149](https://github.com/JamesLMilner/terra-draw/issues/149)) ([f18a2aa](https://github.com/JamesLMilner/terra-draw/commit/f18a2aa42306456769b242eddc128a077bb07421))
+* add e2e testing suite using Playwright ([#144](https://github.com/JamesLMilner/terra-draw/issues/144)) ([05c00d9](https://github.com/JamesLMilner/terra-draw/commit/05c00d9c2287a779b7d48d76cd5e517b444642fd))
+* add linting as a step on CI ([#146](https://github.com/JamesLMilner/terra-draw/issues/146)) ([a690ba7](https://github.com/JamesLMilner/terra-draw/commit/a690ba76abe9f478b4b35bdb9e1a01663a2f678f))
+* cache playwright browser ([#148](https://github.com/JamesLMilner/terra-draw/issues/148)) ([e017e15](https://github.com/JamesLMilner/terra-draw/commit/e017e1547c151feeda4e11756ee3e7e0891914e1))
+
+
+### Tests
+
+* add basic tests for Rectangle, Circle, Great Circle and Select modes ([#151](https://github.com/JamesLMilner/terra-draw/issues/151)) ([4825301](https://github.com/JamesLMilner/terra-draw/commit/48253019c2d7fcecb69fe32ceebe9d80217312f8))
+* fix unit tests for arcgis adapter ([2d40699](https://github.com/JamesLMilner/terra-draw/commit/2d40699139565c973a367c1a786cb8cd9676ef15))
+
+### [0.0.1-alpha.51](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.50...v0.0.1-alpha.51) (2023-11-29)
+
+
+### Bug Fixes
+
+* remove specific check for map event element to fix interacting with all controls ([ab7853a](https://github.com/JamesLMilner/terra-draw/commit/ab7853aabebe0b8971825e0a1b6155f946b1c117))
+
+### [0.0.1-alpha.50](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.49...v0.0.1-alpha.50) (2023-11-28)
+
+
+### Bug Fixes
+
+* ensure the event element is the map surface to fix clicking on controls ([9190738](https://github.com/JamesLMilner/terra-draw/commit/919073823163e659510d211855c82d6bf3141992))
+
+### [0.0.1-alpha.49](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.48...v0.0.1-alpha.49) (2023-11-27)
+
+
+### Features
+
+* add devcontainer configuration ([dcd6886](https://github.com/JamesLMilner/terra-draw/commit/dcd68860e3b6a3906ecad7a8f1a20de61eefa184))
+
+
+### Bug Fixes
+
+* change default minPixelDragDistanceSelecting to 1 ([027f63c](https://github.com/JamesLMilner/terra-draw/commit/027f63c808d020bdf443d396cd61ff5727349a82))
+* ensure post-create runs in codespaces ([ea354a9](https://github.com/JamesLMilner/terra-draw/commit/ea354a972f172cbd15394fe61ee1761f89e945ee))
+* ensure that google maps cursor changing work across different language settings ([cb8431e](https://github.com/JamesLMilner/terra-draw/commit/cb8431e6bf0dc117e0c9d3fe178eaa9412a9a3b6))
+* ignore input events not on the map surface ([#121](https://github.com/JamesLMilner/terra-draw/issues/121)) ([2a8a176](https://github.com/JamesLMilner/terra-draw/commit/2a8a1761012f706eed3ab5eeb3efcd1145c29a94))
+
+
+### Tests
+
+* improve test coverage of Google Maps adapter ([814fc17](https://github.com/JamesLMilner/terra-draw/commit/814fc1720aef5790f64757b27fc108a3662c2be9))
+
+
+### Refactors
+
+* move Adapter event listener init and small convention improvements ([252c9ef](https://github.com/JamesLMilner/terra-draw/commit/252c9ef05e76c5d52ad0388efc05b3351cccdcf8)), closes [/github.com/JamesLMilner/terra-draw/pull/98#discussion_r1359947432](https://github.com/JamesLMilner//github.com/JamesLMilner/terra-draw/pull/98/issues/discussion_r1359947432) [/github.com/JamesLMilner/terra-draw/pull/103#issuecomment-1773853793](https://github.com/JamesLMilner//github.com/JamesLMilner/terra-draw/pull/103/issues/issuecomment-1773853793)
+
+
+### Chore
+
+* fix eslint error in circle unit test ([a131686](https://github.com/JamesLMilner/terra-draw/commit/a1316865658a29c5e5d25cf4e58ad01c94039c2d))
+* fix nocheck testing on windows ([a7ad32a](https://github.com/JamesLMilner/terra-draw/commit/a7ad32acf530080359a1ff93b96c9d3e81f6a9d1))
+* prevent dev server from reloading unnecessarily ([89843cf](https://github.com/JamesLMilner/terra-draw/commit/89843cfe936395283fa139cde587fbecd0072c46))
+* remove style.type setting for style sheets as it is deprecated ([321d438](https://github.com/JamesLMilner/terra-draw/commit/321d4385ecc6eb76dd8c78a6a4d279b3adabab2e))
+* update eslint plugins to get commit hooks working ([fa054f4](https://github.com/JamesLMilner/terra-draw/commit/fa054f4188648472b47f627f90c3b086bcfc50dd))
+* update github actions to use Node v18 ([74e78e6](https://github.com/JamesLMilner/terra-draw/commit/74e78e6a2043b836d71b6618271306cab329543d))
+* update typescript from version 5.0.3 to 5.2.2 ([25bbb26](https://github.com/JamesLMilner/terra-draw/commit/25bbb26529a53cc479f9af7259a2f529c287b62a))
+
+
+### Documentation
+
+* added getting started code for MapLibre ([#119](https://github.com/JamesLMilner/terra-draw/issues/119)) ([fa47aa1](https://github.com/JamesLMilner/terra-draw/commit/fa47aa10fa498569065a4d96e9f8e6892f8ee00c))
+* updated DEVELOPMENT to reference Node 18 ([96fc5d4](https://github.com/JamesLMilner/terra-draw/commit/96fc5d4f3932c263bb826bef0d0976414b913ed1))
+
+### [0.0.1-alpha.48](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.47...v0.0.1-alpha.48) (2023-09-20)
+
+
+### Features
+
+* prevent creating points around closing point ([d28b076](https://github.com/JamesLMilner/terra-draw/commit/d28b076748bee8d97a562ca93dfcdae04c565e7d))
+
+
+### Bug Fixes
+
+* corrected project/unproject when tilting/rotating a google vector map ([25fe7a2](https://github.com/JamesLMilner/terra-draw/commit/25fe7a2ed4d5fa9eaf4ae8025ea9e225c7763ef9))
+* fire an onFinish event when finished dragging a coordinate or feature ([5336035](https://github.com/JamesLMilner/terra-draw/commit/53360356774f33aabee6572507ba5dd291d5d3c2))
+
+
+### Chore
+
+* document how to use terra draw with a script tag ([1e069b4](https://github.com/JamesLMilner/terra-draw/commit/1e069b42d58f33518e628f54621be95c91a48b31))
+* remove env file ([e3f4422](https://github.com/JamesLMilner/terra-draw/commit/e3f44225388059a5c3153da7e01c3daf2bb3f7ba))
+* remove ts-node from dependencies list ([531d0d1](https://github.com/JamesLMilner/terra-draw/commit/531d0d16328f1cf940775b5ed5658f22cf4aca30))
+
+### [0.0.1-alpha.47](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.45...v0.0.1-alpha.47) (2023-09-01)
+
+
+### Features
+
+* add getFeaturesAtLngLat and getFeaturesAtPointerEvent methods to terra draw API ([f5f824f](https://github.com/JamesLMilner/terra-draw/commit/f5f824f619907a8c618fa5dc4649bd0259d2a45a))
+* add self intersection prevention as a configuration option for select mode ([a975295](https://github.com/JamesLMilner/terra-draw/commit/a97529541ab25912e28d2ae067d463aa507b200e))
+* allow custom limits of microdrags whilst selecting ([c02a067](https://github.com/JamesLMilner/terra-draw/commit/c02a0678ea0953e061de11f1477a4121668b37eb))
+
+
+### Bug Fixes
+
+* resolve issue for polygon snapping where first click does not snap ([e13c4e6](https://github.com/JamesLMilner/terra-draw/commit/e13c4e6327885d2b5181bad73cf883e1c9a97c74))
+
+
+### Chore
+
+* **release:** 0.0.1-alpha.46 ([abd0f42](https://github.com/JamesLMilner/terra-draw/commit/abd0f4210b70bff53028e1c0ef3001e7e5f2dd44))
+* update npmignore file ([d827213](https://github.com/JamesLMilner/terra-draw/commit/d827213d136d5bc1e10c1fd822f64633cc45b76f))
+
+### [0.0.1-alpha.46](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.45...v0.0.1-alpha.46) (2023-09-01)
+
+
+### Features
+
+* add getFeaturesAtLngLat and getFeaturesAtPointerEvent methods to terra draw API ([f5f824f](https://github.com/JamesLMilner/terra-draw/commit/f5f824f619907a8c618fa5dc4649bd0259d2a45a))
+* add self intersection prevention as a configuration option for select mode ([a975295](https://github.com/JamesLMilner/terra-draw/commit/a97529541ab25912e28d2ae067d463aa507b200e))
+* allow custom limits of microdrags whilst selecting ([c02a067](https://github.com/JamesLMilner/terra-draw/commit/c02a0678ea0953e061de11f1477a4121668b37eb))
+
+
+### Bug Fixes
+
+* resolve issue for polygon snapping where first click does not snap ([e13c4e6](https://github.com/JamesLMilner/terra-draw/commit/e13c4e6327885d2b5181bad73cf883e1c9a97c74))
+
+
+### Chore
+
+* update npmignore file ([d827213](https://github.com/JamesLMilner/terra-draw/commit/d827213d136d5bc1e10c1fd822f64633cc45b76f))
+
+### [0.0.1-alpha.45](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.44...v0.0.1-alpha.45) (2023-08-08)
+
+
+### Features
+
+* add basic tests for arcgis maps sdk adapter ([7fe12a3](https://github.com/JamesLMilner/terra-draw/commit/7fe12a3eb583b39bca409671f2c55e144cb17be9))
+* add Esri ArcGIS Maps SDK adapter ([0fece22](https://github.com/JamesLMilner/terra-draw/commit/0fece229c6ccd3fb573b634f6c5314c3192da76d))
+* add tests for render method ([14a3733](https://github.com/JamesLMilner/terra-draw/commit/14a3733c373a222bea569735eff4eb2f4c793587))
+* adjust styling to equal other map adapters ([2d07973](https://github.com/JamesLMilner/terra-draw/commit/2d07973fa24d96943064c444d18beb227615dd87))
+* allow cursors to be configured for built in modes ([57a5db2](https://github.com/JamesLMilner/terra-draw/commit/57a5db299b6424f7375a852c231fde0d6e0a4131))
+
+
+### Bug Fixes
+
+* better registration of selections by ignoring microdrags even when not drawing ([cd7a8ea](https://github.com/JamesLMilner/terra-draw/commit/cd7a8eaac209ba95784a961d823f7693038dd2ff))
+* pass modes as array rather than object ([80885cc](https://github.com/JamesLMilner/terra-draw/commit/80885cc62a15ec9ef32cf739771628cb2fe6edb2))
+
+
+### Chore
+
+* add ArcGIS JavaScript SDK to the README ([1801e50](https://github.com/JamesLMilner/terra-draw/commit/1801e5003a2d3b079c641d323d1ac70ccca58b36))
+* split out common patterns guide to its own file ([ef721cf](https://github.com/JamesLMilner/terra-draw/commit/ef721cf0385d9d3754a5a951fc930c1792405401))
+* update docs ([f1d1832](https://github.com/JamesLMilner/terra-draw/commit/f1d1832a5a95003a422d7e129c56e4c295a25e44))
+
 ### [0.0.1-alpha.44](https://github.com/JamesLMilner/terra-draw/compare/v0.0.1-alpha.43...v0.0.1-alpha.44) (2023-07-25)
 
 

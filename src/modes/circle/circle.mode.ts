@@ -3,15 +3,19 @@ import {
 	TerraDrawMouseEvent,
 	TerraDrawAdapterStyling,
 	TerraDrawKeyboardEvent,
-	HexColor,
 	HexColorStyling,
 	NumericStyling,
+	Cursor,
 } from "../../common";
 import { haversineDistanceKilometers } from "../../geometry/measure/haversine-distance";
 import { circle } from "../../geometry/shape/create-circle";
 import { GeoJSONStoreFeatures } from "../../store/store";
 import { getDefaultStyling } from "../../util/styling";
-import { TerraDrawBaseDrawMode } from "../base.mode";
+import {
+	BaseModeOptions,
+	CustomStyling,
+	TerraDrawBaseDrawMode,
+} from "../base.mode";
 import { isValidNonIntersectingPolygonFeature } from "../../geometry/boolean/is-valid-polygon-feature";
 
 type TerraDrawCircleModeKeyEvents = {
@@ -19,25 +23,43 @@ type TerraDrawCircleModeKeyEvents = {
 	finish: KeyboardEvent["key"] | null;
 };
 
-type FreehandPolygonStyling = {
+type CirclePolygonStyling = {
 	fillColor: HexColorStyling;
 	outlineColor: HexColorStyling;
 	outlineWidth: NumericStyling;
 	fillOpacity: NumericStyling;
 };
 
-export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonStyling> {
+interface Cursors {
+	start?: Cursor;
+}
+
+interface TerraDrawCircleModeOptions<T extends CustomStyling>
+	extends BaseModeOptions<T> {
+	keyEvents?: TerraDrawCircleModeKeyEvents | null;
+	cursors?: Cursors;
+}
+
+export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<CirclePolygonStyling> {
 	mode = "circle";
 	private center: Position | undefined;
 	private clickCount = 0;
 	private currentCircleId: string | undefined;
 	private keyEvents: TerraDrawCircleModeKeyEvents;
+	private cursors: Required<Cursors>;
 
-	constructor(options?: {
-		styles?: Partial<FreehandPolygonStyling>;
-		keyEvents?: TerraDrawCircleModeKeyEvents | null;
-	}) {
+	constructor(options?: TerraDrawCircleModeOptions<CirclePolygonStyling>) {
 		super(options);
+
+		const defaultCursors = {
+			start: "crosshair",
+		} as Required<Cursors>;
+
+		if (options && options.cursors) {
+			this.cursors = { ...defaultCursors, ...options.cursors };
+		} else {
+			this.cursors = defaultCursors;
+		}
 
 		// We want to have some defaults, but also allow key bindings
 		// to be explicitly turned off
@@ -74,7 +96,7 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 	/** @internal */
 	start() {
 		this.setStarted();
-		this.setCursor("crosshair");
+		this.setCursor(this.cursors.start);
 	}
 
 	/** @internal */
@@ -106,6 +128,10 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 			this.clickCount++;
 			this.setDrawing();
 		} else {
+			if (this.clickCount === 1 && this.center && this.currentCircleId) {
+				this.createCircle(event);
+			}
+
 			// Finish drawing
 			this.close();
 		}
@@ -114,22 +140,7 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
 		this.setCursor("crosshair");
-		if (this.clickCount === 1 && this.center && this.currentCircleId) {
-			const distanceKm = haversineDistanceKilometers(this.center, [
-				event.lng,
-				event.lat,
-			]);
-
-			const updatedCircle = circle({
-				center: this.center,
-				radiusKilometers: distanceKm,
-				coordinatePrecision: this.coordinatePrecision,
-			});
-
-			this.store.updateGeometry([
-				{ id: this.currentCircleId, geometry: updatedCircle.geometry },
-			]);
-		}
+		this.createCircle(event);
 	}
 
 	/** @internal */
@@ -180,25 +191,25 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 			styles.polygonFillColor = this.getHexColorStylingValue(
 				this.styles.fillColor,
 				styles.polygonFillColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineColor = this.getHexColorStylingValue(
 				this.styles.outlineColor,
 				styles.polygonOutlineColor,
-				feature
+				feature,
 			);
 
 			styles.polygonOutlineWidth = this.getNumericStylingValue(
 				this.styles.outlineWidth,
 				styles.polygonOutlineWidth,
-				feature
+				feature,
 			);
 
 			styles.polygonFillOpacity = this.getNumericStylingValue(
 				this.styles.fillOpacity,
 				styles.polygonFillOpacity,
-				feature
+				feature,
 			);
 
 			return styles;
@@ -215,6 +226,25 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<FreehandPolygonSt
 			);
 		} else {
 			return false;
+		}
+	}
+
+	private createCircle(event: TerraDrawMouseEvent) {
+		if (this.clickCount === 1 && this.center && this.currentCircleId) {
+			const distanceKm = haversineDistanceKilometers(this.center, [
+				event.lng,
+				event.lat,
+			]);
+
+			const updatedCircle = circle({
+				center: this.center,
+				radiusKilometers: distanceKm,
+				coordinatePrecision: this.coordinatePrecision,
+			});
+
+			this.store.updateGeometry([
+				{ id: this.currentCircleId, geometry: updatedCircle.geometry },
+			]);
 		}
 	}
 }
