@@ -125,7 +125,6 @@ export class TerraDrawFreehandMode extends TerraDrawBaseDrawMode<FreehandPolygon
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
-		this.setCursor("crosshair");
 		if (!this.currentId || this.startingClick === false) {
 			return;
 		}

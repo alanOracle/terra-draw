@@ -83,7 +83,7 @@ export abstract class TerraDrawBaseDrawMode<T extends CustomStyling> {
 		if (this._state === "started") {
 			this._state = "drawing";
 		} else {
-			throw new Error("Mode must be started to be drawing");
+			throw new Error("Mode must be unregistered or stopped to start");
 		}
 	}
 

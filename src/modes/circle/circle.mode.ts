@@ -139,7 +139,6 @@ export class TerraDrawCircleMode extends TerraDrawBaseDrawMode<CirclePolygonStyl
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
-		this.setCursor("crosshair");
 		this.createCircle(event);
 	}
 
