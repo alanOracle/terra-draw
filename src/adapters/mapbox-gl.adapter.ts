@@ -35,15 +35,14 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 			const geometryTypes = ["point", "linestring", "polygon"] as const;
 			geometryTypes.forEach((geometryKey) => {
 				const id = `td-${geometryKey.toLowerCase()}`;
-				if (this._map.getLayer(id)) this._map.removeLayer(id);
+				this._map.removeLayer(id);
 
 				// Special case for polygons as it has another id for the outline
 				// that we need to make sure we remove
 				if (geometryKey === "polygon") {
-					if (this._map.getLayer(id + "-outline"))
-						this._map.removeLayer(id + "-outline");
+					this._map.removeLayer(id + "-outline");
 				}
-				if (this._map.getSource(id)) this._map.removeSource(id);
+				this._map.removeSource(id);
 			});
 
 			this._rendered = false;
@@ -170,13 +169,10 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 		features: Feature<T>[],
 	) {
 		const id = `td-${featureType.toLowerCase()}`;
-		const source = this._map.getSource(id);
-		if (source) {
-			(source as any).setData({
-				type: "FeatureCollection",
-				features: features,
-			});
-		}
+		(this._map.getSource(id) as any).setData({
+			type: "FeatureCollection",
+			features: features,
+		});
 		return id;
 	}
 
@@ -425,9 +421,8 @@ export class TerraDrawMapboxGLAdapter extends TerraDrawBaseAdapter {
 				// defined layers outside of TerraDraw which is perhaps unideal
 
 				// Ensure selection/mid points are rendered on top
-				pointId && this._map.getLayer(pointId) && this._map.moveLayer(pointId);
+				pointId && this._map.moveLayer(pointId);
 			}
-			// Copyright © [2023,] , Oracle and/or its affiliates.
 
 			// Reset changed ids
 			this.changedIds = {
