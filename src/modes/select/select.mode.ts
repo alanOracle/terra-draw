@@ -237,7 +237,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		this.selected = [];
 	}
 
-	onRightClick(event: TerraDrawMouseEvent) {
+	private onRightClick(event: TerraDrawMouseEvent) {
 		if (!this.selectionPoints.ids.length) {
 			return;
 		}
@@ -412,8 +412,6 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				clickedFeature.id as string,
 			);
 
-			this.setCursor("move");
-
 			if (type !== "LineString" && type !== "Polygon") {
 				return;
 			}
@@ -564,7 +562,6 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		}
 
 		this.dragEventCount = 0;
-		this.setCursorStyle(event);
 
 		const selectedId = this.selected[0];
 		const draggableCoordinateIndex = this.dragCoordinate.getDraggableIndex(
@@ -582,13 +579,6 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			this.setCursor(this.cursors.dragStart);
 			this.dragCoordinate.startDragging(selectedId, draggableCoordinateIndex);
 			setMapDraggability(false);
-
-			// We delete the single selection point to improve performance
-			// Since thats the only point actually moving when dragging a coordinate
-			this.selectionPoints.deleteSingle(draggableCoordinateIndex);
-
-			// Also deleting all midpoints (Again for performance to avoid updating them when dragging a coordinate)
-			this.midPoints.delete();
 			return;
 		}
 
@@ -601,10 +591,6 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			this.setCursor(this.cursors.dragStart);
 			this.dragFeature.startDragging(event, selectedId);
 			setMapDraggability(false);
-
-			// Remove all selection and mid points
-			this.selectionPoints.delete();
-			this.midPoints.delete();
 			return;
 		}
 	}
@@ -734,7 +720,7 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 		_: TerraDrawMouseEvent,
 		setMapDraggability: (enabled: boolean) => void,
 	) {
-		this.setCursorStyle(_);
+		this.setCursor(this.cursors.dragEnd);
 
 		// If we have finished dragging a coordinate or a feature
 		// lets fire an onFinish event which can be listened to
@@ -744,30 +730,12 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 			this.onFinish(this.selected[0]);
 		}
 
+		this.dragCoordinate.stopDragging();
+		this.dragFeature.stopDragging();
 		this.rotateFeature.reset();
 		this.scaleFeature.reset();
 		setMapDraggability(true);
-
-		// If we were dragging a coordinate first delete all selection
-		// and mid points to reset everything from scratch
-		if (this.dragCoordinate.isDragging()) {
-			this.selectionPoints.delete();
-			this.midPoints.delete();
-		}
-
-		// Re construct all selection and midpoints
-		if (this.dragCoordinate.isDragging() || this.dragFeature.isDragging()) {
-			this.createSelectionAndMidPoints();
-		}
-
-		// Put back "started" state if we set "selecting" when onPointerDown
-		if (this.state === 'selecting'){
-			this.setStarted();
-		}
-		this.dragCoordinate.stopDragging();
-		this.dragFeature.stopDragging();
 	}
-	// Copyright © [2023,] , Oracle and/or its affiliates.
 
 	/** @internal */
 	onMouseMove(event: TerraDrawMouseEvent) {
@@ -804,10 +772,25 @@ export class TerraDrawSelectMode extends TerraDrawBaseDrawMode<SelectionStyling>
 				nearbySelectionPoint = true;
 			}
 		});
-		if (nearbySelectionPoint) {
-			this.setCursor("pointer");
+
+		if (nearbyMidPoint) {
+			this.setCursor(this.cursors.insertMidpoint);
+			return;
+		}
+
+		// If we have a feature under the pointer then show the pointer over cursor
+		const { clickedFeature: featureUnderPointer } =
+			this.featuresAtMouseEvent.find(event, true);
+
+		if (
+			this.selected.length > 0 &&
+			((featureUnderPointer && featureUnderPointer.id === this.selected[0]) ||
+				nearbySelectionPoint)
+		) {
+			this.setCursor(this.cursors.pointerOver);
 		} else {
-			this.setCursorStyle(event);
+			// Set it back to whatever the default cursor is
+			this.setCursor("unset");
 		}
 	}
 
